@@ -1,0 +1,93 @@
+@import "tailwindcss";
+
+html,
+body {
+  height: 100%;
+  width: 100%;
+  margin: 0;
+  padding: 0;
+  scroll-behavior: smooth;
+  /* scrollbar-gutter: stable; */
+}
+
+/* Override dark variant to activate on .dark class */
+@custom-variant dark (&:where(.dark, .dark *));
+
+/* Service Provider Theme */
+@theme {
+  --color-primary-500: #2a7fe7;
+  /* --color-primary-500: #b59410; */
+  --color-primary-600: #6ba7f1;
+  /* --color-primary-600: #c4a225; */
+
+  --color-surface-500: #ffffff;
+  /* --color-background-500: #f9fafb; */
+  --color-background-500: #65f7f716;
+  /* --color-background-500: #74a4aa32; */
+  --color-surface-600: #e5e7eb;
+
+  --color-text-500: #1f2937;
+  --color-text-400: #6b7280;
+
+  --color-border-500: #e5e7eb;
+
+  --color-success-500: #10b981;
+  --color-danger-500: #ef4444;
+}
+
+/*───────────────────────────────────────────────
+    Dark theme variables
+  ───────────────────────────────────────────────*/
+@theme {
+  --color-background-800: #121212;
+  --color-surface-800: #1e1e1e;
+
+  --color-text-700: #a1a1aa;
+
+  --color-border-800: #2a2a2a;
+
+  --color-success-800: #34d399;
+  --color-danger-800: #f87171;
+}
+
+/* Booking Section Theme */
+/* Light Theme */
+@theme {
+  /* Primary Colors */
+  --color-primary-1: #eef2ff;
+  --color-primary-2: #6366f1;
+  --color-primary-3: #4f46e5;
+
+  /* Accent Colors */
+  --color-accent-1: #fdf2f8;
+  --color-accent-2: #ec4899;
+  --color-accent-3: #db2777;
+
+  /* Surface Colors */
+  --color-surface-1: #f8fafc;
+  --color-surface-2: #f1f5f9;
+  --color-surface-3: #1e293b;
+  --color-surface-4: #0f172a;
+
+  /* Dark Theme */
+
+  --color-primary-11: #818cf8;
+  --color-primary-12: #6366f1;
+  --color-accent-11: #f472b6;
+  /* --color-accent-12: #ec4899; 600 */
+}
+
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+    transform: translateY(10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.animate-fadeIn {
+  animation: fadeIn 0.3s ease-out forwards;
+}
