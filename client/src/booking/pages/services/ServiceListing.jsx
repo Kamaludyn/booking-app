@@ -120,7 +120,7 @@ export default function ServiceListing() {
                 </div>
                 <h3
                   className="text-xl font-semibold cursor-pointer"
-                  onClick={() => navigate(`/booking/services/${service.id}`)}
+                  onClick={() => navigate(`/booking/${service.id}`)}
                 >
                   {service.name}
                 </h3>
@@ -148,7 +148,7 @@ export default function ServiceListing() {
                   ${service.price}
                 </span>
                 <Link
-                  to={`/book-services/${service.id}`}
+                  to={`/booking/${service.id}`}
                   className="px-4 py-2 bg-primary-2 text-white rounded-lg hover:bg-primary-2/90 transition-colors"
                 >
                   Book Now

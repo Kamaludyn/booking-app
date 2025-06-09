@@ -2,9 +2,12 @@ import { useNavigate } from "react-router-dom";
 import PageHeader from "../../components/PageHeader";
 
 const sections = [
-  { label: "Calendar Integrations", path: "/dashboard/calender" },
-  { label: "Booking Preferences", path: "/dashboard/booking-preference" },
-  { label: "Security Settings", path: "/dashboard/security" },
+  { label: "Calendar Integrations", path: "/dashboard/settings/calender" },
+  {
+    label: "Booking Preferences",
+    path: "/dashboard/settings/booking-preference",
+  },
+  { label: "Security Settings", path: "/dashboard/settings/security" },
 ];
 
 export default function BusinessSettings() {
