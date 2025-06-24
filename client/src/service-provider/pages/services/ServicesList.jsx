@@ -17,7 +17,7 @@ export default function ServicesList() {
   return (
     <div className="space-y-6">
       <PageHeader
-        title="Clients"
+        title="Services"
         subtitle={`${filteredServices.length} clients found`}
         actionLabel="New Service"
         onActionClick={() => navigate("/dashboard/services/new")}

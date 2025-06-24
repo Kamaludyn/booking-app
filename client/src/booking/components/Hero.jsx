@@ -19,7 +19,7 @@ const Hero = () => {
             Browse Services
           </Link>
           <button className="px-8 py-3 border-2 border-primary-2 text-primary-2 dark:text-primary-400 font-medium rounded-lg cursor-default">
-            Book Now
+            About Us
           </button>
         </div>
       </div>

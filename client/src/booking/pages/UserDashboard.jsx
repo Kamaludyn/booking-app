@@ -3,8 +3,6 @@ import { Link } from "react-router-dom";
 import {
   Calendar,
   Clock,
-  MapPin,
-  User,
   Settings,
   History,
   Scissors,
@@ -34,6 +32,8 @@ export default function UserDashboard() {
         duration: "45 min",
         price: "$45.00",
         location: "Downtown Salon",
+        paymentStatus: "Partial",
+        amountPaid: 11.25,
       },
       {
         id: "BK345678",
@@ -44,8 +44,11 @@ export default function UserDashboard() {
         duration: "60 min",
         price: "$85.00",
         location: "Westside Spa",
+        paymentStatus: "Paid",
+        amountPaid: 85.0,
       },
     ],
+
     past: [
       {
         id: "BK123456",
@@ -83,6 +86,14 @@ export default function UserDashboard() {
       default:
         return <Calendar className="w-5 h-5" />;
     }
+  };
+
+  const formatCurrency = (value) => `$${parseFloat(value).toFixed(2)}`;
+
+  const getRemainingBalance = (priceStr, paid) => {
+    const total = parseFloat(priceStr.replace("$", ""));
+    const balance = total - (paid || 0);
+    return balance > 0 ? formatCurrency(balance) : "$0.00";
   };
 
   return (
@@ -143,33 +154,62 @@ export default function UserDashboard() {
           {appointments[activeTab].length > 0 ? (
             appointments[activeTab].map((appointment) => (
               <div key={appointment.id} className="p-6">
-                <div className="flex justify-between items-start">
-                  <div className="flex items-start gap-4">
-                    <div className="p-2 rounded-lg bg-primary-2/10 text-primary-2 mt-1">
-                      {getServiceIcon(appointment.service)}
-                    </div>
-                    <div>
-                      <h3 className="font-bold text-lg mb-1">
-                        {appointment.service}
-                      </h3>
-                      <div className="flex flex-wrap gap-x-4 gap-y-2 text-sm">
-                        <div className="flex items-center text-text-600 dark:text-text-400">
-                          <Clock className="w-4 h-4 mr-1.5" />
-                          {appointment.date} at {appointment.time}
-                        </div>
-                        <div className="flex items-center text-text-600 dark:text-text-400">
-                          <User className="w-4 h-4 mr-1.5" />
-                          {appointment.professional}
-                        </div>
-                        <div className="flex items-center text-text-600 dark:text-text-400">
-                          <MapPin className="w-4 h-4 mr-1.5" />
-                          {appointment.location}
+                <div className="flex items-center md:gap-4">
+                  <div className="self-start p-2 rounded-lg bg-primary-2/10 text-primary-2 mt-1">
+                    {getServiceIcon(appointment.service)}
+                  </div>
+                  <div className="w-full md:w-2/3 flex items-center justify-center md:justify-between flex-col md:flex-row gap-4">
+                    <div className="flex items-center gap-4 md:w-[60%]">
+                      <div>
+                        <h3 className="font-bold text-lg mb-1">
+                          {appointment.service}
+                        </h3>
+                        <div className="flex flex-wrap gap-x-4 gap-y-2 text-sm">
+                          <div className="flex items-center text-text-600 dark:text-text-400">
+                            <Clock className="w-4 h-4 mr-1.5" />
+                            {appointment.date} at {appointment.time}
+                          </div>
                         </div>
                       </div>
                     </div>
+                    {activeTab === "upcoming" && (
+                      <div className="md:w-[38%] space-y-2 text-sm sm:text-base">
+                        <div className="flex justify-between items-center gap-2">
+                          <span className="font-medium text-text-600 dark:text-text-400">
+                            Payment Status:
+                          </span>
+                          <span
+                            className={`inline-block px-2 py-0.5 rounded-full text-white text-xs font-semibold ${
+                              appointment.paymentStatus === "Paid"
+                                ? "bg-green-500"
+                                : appointment.paymentStatus === "Partial"
+                                ? "bg-yellow-500"
+                                : "bg-red-500"
+                            }`}
+                          >
+                            {appointment.paymentStatus}
+                          </span>
+                        </div>
+
+                        {appointment.paymentStatus !== "Paid" && (
+                          <div className="flex justify-between items-center gap-2">
+                            <span className="font-medium text-text-600 dark:text-text-400">
+                              Balance Remaining:
+                            </span>
+                            <span className="font-semibold text-text-700 dark:text-text-200">
+                              {getRemainingBalance(
+                                appointment.price,
+                                appointment.amountPaid
+                              )}
+                            </span>
+                          </div>
+                        )}
+                      </div>
+                    )}
                   </div>
+
                   {activeTab === "upcoming" && (
-                    <div className="flex gap-2">
+                    <div className="flex flex-col md:flex-row gap-2">
                       <button className="p-2 text-primary-2 hover:bg-surface-2 dark:hover:bg-surface-4 rounded-lg">
                         <Edit className="w-5 h-5" />
                       </button>

@@ -34,7 +34,7 @@ export default function Clients() {
         title="Clients"
         subtitle={`${filteredClients.length} clients found`}
         actionLabel="New Client"
-        onActionClick={() => navigate("/dashboard/appointments/new")}
+        onActionClick={() => navigate("/dashboard/clients/new")}
         actionIcon={Plus}
         isButton
       />

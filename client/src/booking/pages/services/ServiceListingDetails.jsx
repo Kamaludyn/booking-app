@@ -22,6 +22,9 @@ export default function ServiceListingDetails() {
   const [selectedTime, setSelectedTime] = useState("");
   const [showFullForm, setShowFullForm] = useState(false);
   const [createAccount, setCreateAccount] = useState(false);
+  const [paymentMethod, setPaymentMethod] = useState(null);
+  const depositAmount = Math.ceil(service.price * 0.25);
+
   const navigate = useNavigate();
 
   useEffect(() => {
@@ -284,8 +287,75 @@ export default function ServiceListingDetails() {
                       </div>
                     </div>
                   )}
+                  {service.requireDeposit && (
+                    <div className="p-4 border border-yellow-400 bg-yellow-50 dark:bg-yellow-900/10 rounded-lg mb-4">
+                      <p className="text-sm text-yellow-800 dark:text-yellow-200">
+                        This service requires a deposit to confirm your
+                        appointment.
+                      </p>
+                      <p className="font-semibold mt-2 text-yellow-900 dark:text-yellow-100">
+                        Deposit Amount: ${Math.ceil(service.price * 0.25)}
+                      </p>
+                    </div>
+                  )}
+
+                  {service.requireDeposit && (
+                    <div className="space-y-2 mb-4">
+                      <h4 className="text-sm font-medium">
+                        Select Payment Method:
+                      </h4>
+                      <div className="grid grid-cols-3 gap-2">
+                        {["Stripe", "PayPal", "Offline"].map((method) => (
+                          <button
+                            key={method}
+                            className={`py-2 px-3 rounded-lg border text-sm ${
+                              paymentMethod === method
+                                ? "bg-primary-2 text-white border-primary-2"
+                                : "border-border-800/20 dark:border-text-400 hover:bg-surface-2 dark:hover:bg-surface-4"
+                            }`}
+                            onClick={() => setPaymentMethod(method)}
+                          >
+                            {method}
+                          </button>
+                        ))}
+                      </div>
+                    </div>
+                  )}
 
                   <div className="pt-4 space-y-3">
+                    <button
+                      className={`w-full py-3 rounded-lg font-medium ${
+                        (!service.requireDeposit ||
+                          (service.requireDeposit && paymentMethod)) &&
+                        selectedDate &&
+                        selectedTime
+                          ? "bg-primary-2 text-white hover:bg-primary-2/90"
+                          : "bg-surface-2 dark:bg-surface-4 cursor-not-allowed"
+                      }`}
+                      disabled={
+                        (service.requireDeposit && !paymentMethod) ||
+                        !selectedDate ||
+                        !selectedTime
+                      }
+                      onClick={() => {
+                        if (service.requireDeposit) {
+                          console.log(
+                            "Proceed with payment via:",
+                            paymentMethod
+                          );
+                          // Later: redirect to payment session / handle logic based on method
+                        }
+                        navigate("/booking-confirmation");
+                      }}
+                    >
+                      {createAccount
+                        ? "Create Account & Book Now"
+                        : service.requireDeposit
+                        ? "Pay Deposit & Confirm"
+                        : "Confirm Booking"}
+                    </button>
+
+                    {/* <div className="pt-4 space-y-3">
                     <button
                       className="w-full py-3 bg-primary-2 text-white rounded-lg font-medium hover:bg-primary-2/90"
                       onClick={() => navigate("/booking-confirmation")}
@@ -293,7 +363,7 @@ export default function ServiceListingDetails() {
                       {createAccount
                         ? "Create Account & Book Now"
                         : "Confirm Booking"}
-                    </button>
+                    </button> */}
 
                     {createAccount && (
                       <button
