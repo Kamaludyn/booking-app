@@ -154,11 +154,11 @@ export default function UserDashboard() {
           {appointments[activeTab].length > 0 ? (
             appointments[activeTab].map((appointment) => (
               <div key={appointment.id} className="p-6">
-                <div className="flex items-center md:gap-4">
-                  <div className="self-start p-2 rounded-lg bg-primary-2/10 text-primary-2 mt-1">
+                <div className="flex justify-between items-center sm:gap-4">
+                  <div className="self-start sm:self-center p-2 rounded-lg bg-primary-2/10 text-primary-2 mt-1">
                     {getServiceIcon(appointment.service)}
                   </div>
-                  <div className="w-full md:w-2/3 flex items-center justify-center md:justify-between flex-col md:flex-row gap-4">
+                  <div className="w-full md:w-full flex items-center sm:items-start flex-col sm:flex-row gap-4">
                     <div className="flex items-center gap-4 md:w-[60%]">
                       <div>
                         <h3 className="font-bold text-lg mb-1">
@@ -174,7 +174,7 @@ export default function UserDashboard() {
                     </div>
                     {activeTab === "upcoming" && (
                       <div className="md:w-[38%] space-y-2 text-sm sm:text-base">
-                        <div className="flex justify-between items-center gap-2">
+                        <div className="flex items-center gap-2">
                           <span className="font-medium text-text-600 dark:text-text-400">
                             Payment Status:
                           </span>
@@ -192,7 +192,7 @@ export default function UserDashboard() {
                         </div>
 
                         {appointment.paymentStatus !== "Paid" && (
-                          <div className="flex justify-between items-center gap-2">
+                          <div className="flex items-center gap-2">
                             <span className="font-medium text-text-600 dark:text-text-400">
                               Balance Remaining:
                             </span>
@@ -209,7 +209,7 @@ export default function UserDashboard() {
                   </div>
 
                   {activeTab === "upcoming" && (
-                    <div className="flex flex-col md:flex-row gap-2">
+                    <div className="flex flex-col gap-2">
                       <button className="p-2 text-primary-2 hover:bg-surface-2 dark:hover:bg-surface-4 rounded-lg">
                         <Edit className="w-5 h-5" />
                       </button>
