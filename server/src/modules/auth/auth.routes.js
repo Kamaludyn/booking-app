@@ -52,10 +52,4 @@ router.patch("/reset-password/:token", authController.resetPassword);
 // @route   Post /api/v1/auth/logout
 router.post("/logout", authController.logout);
 
-// @route   GET /api/v1/auth/users
-router.get("/users", authController.getAllUsers);
-
-// @route   DELETE /api/v1/auth/users
-router.delete("/users", authController.deleteAllUsers);
-
 module.exports = router;
