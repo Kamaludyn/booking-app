@@ -76,6 +76,7 @@ const bookingSchema = new mongoose.Schema(
         },
       ],
     },
+    balanceAmount: { type: Number, default: false },
 
     // Reminder status
     reminder: {
