@@ -32,8 +32,8 @@ const bookingSchema = new mongoose.Schema(
       required: true,
     },
     time: {
-      start: { type: String, required: true }, // Format: HH:mm'
-      end: { type: String, required: true }, // Format: HH:mm
+      start: { type: Date, required: true }, // UTC
+      end: { type: Date, required: true },
     },
     //
     timezone: {
@@ -43,7 +43,7 @@ const bookingSchema = new mongoose.Schema(
     // Booking status
     status: {
       type: String,
-      enum: ["upcoming", "completed", "missed", "cancelled"],
+      enum: ["upcoming", "completed", "missed", "cancelled", "rescheduled"],
       default: "upcoming",
     },
 

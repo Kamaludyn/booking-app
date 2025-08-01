@@ -68,39 +68,6 @@ const register = asyncHandler(async (req, res) => {
   });
 });
 
-//  @desc    Verifies a user's email
-//  @route   GET /api/v1/auth/verify-email/:token
-//  @access  Public
-const verifyEmail = asyncHandler(async (req, res) => {
-  // const verifyEmail = async (req, res, next) => {
-  const { token } = req.params; // Get the token from the route parameter
-
-  // Hash the received token to compare it with the stored hashed token
-  const hashedToken = crypto.createHash("sha256").update(token).digest("hex");
-
-  // Look up the user with matching token and a non-expired verification timestamp
-  const user = await User.findOne({
-    emailVerificationToken: hashedToken,
-    emailVerificationExpires: { $gt: Date.now() }, // Token must still be valid
-  });
-
-  // If no user matches or token expired, respond with error
-  if (!user) {
-    return res.status(400).json({ message: "Invalid or expired token" });
-  }
-
-  // Token is valid — mark user as verified and clear token fields
-  user.isVerified = true;
-  user.emailVerificationToken = undefined;
-  user.emailVerificationExpires = undefined;
-
-  // Save the updated user record
-  await user.save();
-
-  // Respond with success
-  res.status(200).json({ message: "Email verified successfully" });
-});
-
 //  @desc   Login a user
 //  @route  POST /api/v1/auth/login
 //  @access Public
@@ -147,6 +114,39 @@ const login = asyncHandler(async (req, res) => {
 
   // Send token and user info as response
   res.status(200).json({ token, user: userResponse });
+});
+
+//  @desc    Verifies a user's email
+//  @route   GET /api/v1/auth/verify-email/:token
+//  @access  Public
+const verifyEmail = asyncHandler(async (req, res) => {
+  // const verifyEmail = async (req, res, next) => {
+  const { token } = req.params; // Get the token from the route parameter
+
+  // Hash the received token to compare it with the stored hashed token
+  const hashedToken = crypto.createHash("sha256").update(token).digest("hex");
+
+  // Look up the user with matching token and a non-expired verification timestamp
+  const user = await User.findOne({
+    emailVerificationToken: hashedToken,
+    emailVerificationExpires: { $gt: Date.now() }, // Token must still be valid
+  });
+
+  // If no user matches or token expired, respond with error
+  if (!user) {
+    return res.status(400).json({ message: "Invalid or expired token" });
+  }
+
+  // Token is valid — mark user as verified and clear token fields
+  user.isVerified = true;
+  user.emailVerificationToken = undefined;
+  user.emailVerificationExpires = undefined;
+
+  // Save the updated user record
+  await user.save();
+
+  // Respond with success
+  res.status(200).json({ message: "Email verified successfully" });
 });
 
 //  @desc   Allows an authenticated user to change their password

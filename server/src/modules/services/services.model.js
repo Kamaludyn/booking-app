@@ -32,6 +32,10 @@ const serviceShema = new mongoose.Schema(
       type: Boolean,
       default: false,
     },
+    bufferTime: {
+      type: Number,
+      default: 10,
+    },
   },
   { timeStamps: true }
 );

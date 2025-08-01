@@ -1,10 +1,11 @@
 const Booking = require("./booking.model");
 const Service = require("../services/services.model");
-const VendorProfile = require("../vendor/vendor.model");
-const User = require("../auth/auth.model");
 const asyncHandler = require("express-async-handler");
+const generateBookableSlots = require("../../utils/generateBookableSlots");
+const toUtcDate = require("../../utils/convertTime").toUtcDate;
 
 const createBooking = asyncHandler(async (req, res) => {
+  //: Extract and validate required input fields
   const user = req.user;
   const {
     serviceId,
@@ -21,6 +22,10 @@ const createBooking = asyncHandler(async (req, res) => {
   if (!serviceId || !client || !date || !time || !timezone || !createdBy) {
     return res.status(400).json({ message: "Missing required fields." });
   }
+
+  // Convert local date/time to UTC using timezone
+  const startDateUTC = toUtcDate(date, time.start, timezone);
+  const endDateUTC = toUtcDate(date, time.end, timezone);
 
   // Validate client contact fields based on who initiated the booking
   if (createdBy === "client") {
@@ -57,7 +62,7 @@ const createBooking = asyncHandler(async (req, res) => {
       });
     }
 
-    //    Validate minimum deposit amount
+    //  Validate minimum deposit amount
     const minDeposit = service.depositAmount || servicePrice * 0.25; // min of 25%
     if (amountPaid < minDeposit) {
       return res.status(400).json({
@@ -91,17 +96,40 @@ const createBooking = asyncHandler(async (req, res) => {
   // Get vendorId from services
   const vendorId = service.vendorId;
 
-  //   Create booking
+  // Calculate the slot duration
+  const slotDuration = service.duration + service.bufferTime;
+
+  // Validate the selected time slot against vendor's availability
+  const availableSlots = await generateBookableSlots(
+    date,
+    slotDuration,
+    vendorId
+  );
+
+  // Format the selected time slot to match the available slots
+  const formattedSlot = `${time.start}`.padStart(5, "0");
+
+  if (!availableSlots.includes(formattedSlot)) {
+    return res.status(400).json({
+      message: `Selected time slot (${formattedSlot}) is no longer available.`,
+      availableSlots,
+    });
+  }
+
+  //   Create and save booking
   const booking = await Booking.create({
     vendorId,
     serviceId,
     client,
     date,
-    time,
+    time: {
+      start: startDateUTC,
+      end: endDateUTC,
+    },
     timezone,
     notes,
     createdBy,
-    status: "up coming",
+    status: "upcoming",
     payment: {
       status: paymentStatus,
       method: paymentMethod,
