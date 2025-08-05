@@ -79,10 +79,12 @@ const bookingSchema = new mongoose.Schema(
     balanceAmount: { type: Number, default: false },
 
     // Reminder status
-    reminder: {
-      sent: { type: Boolean, default: false },
-      sentAt: { type: Date },
+    reminderStages: {
+      at24h: { type: Boolean, default: false },
+      at3h: { type: Boolean, default: false },
+      at1h: { type: Boolean, default: false },
     },
+    vendorPromptSent: { type: Boolean, default: false },
     // Recurrence settings for repeating bookings
     recurrence: {
       repeat: {

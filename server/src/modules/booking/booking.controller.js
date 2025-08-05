@@ -2,10 +2,10 @@ const Booking = require("./booking.model");
 const Service = require("../services/services.model");
 const asyncHandler = require("express-async-handler");
 const generateBookableSlots = require("../../utils/generateBookableSlots");
-const toUtcDate = require("../../utils/convertTime").toUtcDate;
+const toUtcDate = require("../../utils/convertTime");
 
 const createBooking = asyncHandler(async (req, res) => {
-  //: Extract and validate required input fields
+  // Extract and validate required input fields
   const user = req.user;
   const {
     serviceId,
@@ -22,10 +22,6 @@ const createBooking = asyncHandler(async (req, res) => {
   if (!serviceId || !client || !date || !time || !timezone || !createdBy) {
     return res.status(400).json({ message: "Missing required fields." });
   }
-
-  // Convert local date/time to UTC using timezone
-  const startDateUTC = toUtcDate(date, time.start, timezone);
-  const endDateUTC = toUtcDate(date, time.end, timezone);
 
   // Validate client contact fields based on who initiated the booking
   if (createdBy === "client") {
@@ -116,6 +112,10 @@ const createBooking = asyncHandler(async (req, res) => {
     });
   }
 
+  // Convert local date/time to UTC using timezone
+  const startTime = toUtcDate(date, time.start, timezone);
+  const endTime = toUtcDate(date, time.end, timezone);
+
   //   Create and save booking
   const booking = await Booking.create({
     vendorId,
@@ -123,8 +123,8 @@ const createBooking = asyncHandler(async (req, res) => {
     client,
     date,
     time: {
-      start: startDateUTC,
-      end: endDateUTC,
+      start: startTime,
+      end: endTime,
     },
     timezone,
     notes,
