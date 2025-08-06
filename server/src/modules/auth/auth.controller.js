@@ -8,7 +8,6 @@ const sendEmail = require("../../utils/sendEmail");
 //  @desc    Registers a new user
 //  @route   POST /api/v1/auth/register/:role
 //  @access  Public
-// const register = async (req, res, next) => {
 const register = asyncHandler(async (req, res) => {
   // Extract user details from the request body
   const { surname, othername, email, password } = req.body;

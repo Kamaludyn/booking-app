@@ -11,8 +11,10 @@ const PORT = process.env.PORT;
     // Connect to MongoDB using Mongoose
     await connectDB();
 
-    // Start background schedulers
-    startReminderScheduler();
+    // Start background scheduler
+    if (process.env.NODE_ENV !== "development") {
+      startReminderScheduler();
+    }
 
     // If DB connection succeeds, start the server
     app.listen(PORT, () => {
