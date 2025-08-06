@@ -7,7 +7,7 @@ const toUtcDate = require("../../utils/convertTime");
 
 //  @desc    Creates a new booking
 //  @route   POST /api/v1/bookings
-//  @access  Private
+//  @access  Public
 const createBooking = asyncHandler(async (req, res) => {
   // Extract and validate required input fields
   const user = req.user;
@@ -176,10 +176,10 @@ const getBookings = asyncHandler(async (req, res) => {
   const { userId, role } = req.user;
 
   // Build query object
-let query = {}
+  let query = {};
 
-// Filter by user role
- if (role === "vendor") {
+  // Filter by user role
+  if (role === "vendor") {
     query.vendorId = userId;
   } else if (role === "client") {
     query.client = { _id: userId };
@@ -199,7 +199,7 @@ let query = {}
     .skip((page - 1) * limit)
     .limit(Number(limit));
 
-    // Count total bookings matching the query
+  // Count total bookings matching the query
   const total = await Booking.countDocuments(query);
 
   res.status(200).json({
@@ -212,4 +212,25 @@ let query = {}
   });
 });
 
-module.exports = { createBooking, getBookings };
+//  @desc    Fetch a single booking by ID
+//  @route   GET /api/v1/bookings/:bookingId
+//  @access  Private
+const getBooking = asyncHandler(async (req, res) => {
+  // Extract bookingId from request parameters
+  const { bookingId } = req.params;
+
+  // Fetch booking by ID
+  const booking = await Booking.findById(bookingId);
+
+  // If booking not found, return error
+  if (!booking) {
+    return res.status(404).json({ message: "Booking not found" });
+  }
+
+  res.status(200).json({
+    message: "Booking fetched successfully",
+    booking,
+  });
+});
+
+module.exports = { createBooking, getBookings, getBooking };
