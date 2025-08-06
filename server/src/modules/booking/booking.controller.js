@@ -1,9 +1,13 @@
 const Booking = require("./booking.model");
 const Service = require("../services/services.model");
+const User = require("../auth/auth.model");
 const asyncHandler = require("express-async-handler");
 const generateBookableSlots = require("../../utils/generateBookableSlots");
 const toUtcDate = require("../../utils/convertTime");
 
+//  @desc    Creates a new booking
+//  @route   POST /api/v1/bookings
+//  @access  Private
 const createBooking = asyncHandler(async (req, res) => {
   // Extract and validate required input fields
   const user = req.user;
@@ -165,4 +169,47 @@ const createBooking = asyncHandler(async (req, res) => {
   });
 });
 
-module.exports = { createBooking };
+//  @desc    Fetch all bookings for a user (vendor or client)
+//  @route   GET /api/v1/bookings
+//  @access  Private
+const getBookings = asyncHandler(async (req, res) => {
+  const { userId, role } = req.user;
+
+  // Build query object
+let query = {}
+
+// Filter by user role
+ if (role === "vendor") {
+    query.vendorId = userId;
+  } else if (role === "client") {
+    query.client = { _id: userId };
+  }
+
+  // Query parameters for filtering and pagination
+  const { status, page = 1, limit = 10 } = req.query;
+
+  // Add status filter if provided
+  if (status) {
+    query.status = status;
+  }
+
+  // Fetch bookings with pagination and sorting
+  const bookings = await Booking.find(query)
+    .sort({ "time.start": 1 }) // Latest(Upcoming) first
+    .skip((page - 1) * limit)
+    .limit(Number(limit));
+
+    // Count total bookings matching the query
+  const total = await Booking.countDocuments(query);
+
+  res.status(200).json({
+    message: "Bookings fetched successfully",
+    bookings,
+    total,
+    page: Number(page),
+    limit: Number(limit),
+    hasMore: page * limit < total,
+  });
+});
+
+module.exports = { createBooking, getBookings };
