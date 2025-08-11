@@ -220,7 +220,10 @@ const getBooking = asyncHandler(async (req, res) => {
   const { bookingId } = req.params;
 
   // Fetch booking by ID
-  const booking = await Booking.findById(bookingId);
+  const booking = await Booking.findById(bookingId).populate(
+    "serviceId",
+    "name price duration"
+  );
 
   // If booking not found, return error
   if (!booking) {
@@ -233,4 +236,52 @@ const getBooking = asyncHandler(async (req, res) => {
   });
 });
 
-module.exports = { createBooking, getBookings, getBooking };
+//  @desc    Update a bookiing
+//  @route   GET /api/v1/bookings/:bookingId
+//  @access  Private
+const updateBooking = asyncHandler(async (req, res) => {
+  const { bookingId } = req.params;
+  const { role, userId } = req.user;
+
+  // Find booking
+  const booking = await Booking.findById(bookingId);
+  if (!booking) {
+    return res.status(404).json({ message: "Booking not found" });
+  }
+
+  // Users can only update their own booking
+  if (role === "client" && booking.client.id.toString() !== userId) {
+    return res.status(403).json({ message: "Not authorized as client" });
+  }
+  if (role === "vendor" && booking.vendorId.toString() !== userId) {
+    return res.status(403).json({ message: "Not authorized as vendor" });
+  }
+
+  // Role-based editable fields
+  let allowedFields = [];
+  if (role === "client") {
+    allowedFields = ["date", "time", "notes"];
+  } else if (role === "vendor") {
+    allowedFields = ["date", "time", "status", "notes"];
+  }
+
+  // Filter updates
+  let updates = {};
+
+  allowedFields.forEach((field) => {
+    if (req.body[field] !== undefined) {
+      updates[field] = req.body[field];
+    }
+  });
+
+  // Apply updates
+  Object.assign(booking, updates);
+  await booking.save();
+
+  res.status(200).json({
+    message: "Booking updated successfully",
+    booking,
+  });
+});
+
+module.exports = { createBooking, getBookings, getBooking, updateBooking };
