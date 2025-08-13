@@ -29,22 +29,24 @@ const bookingSchema = new mongoose.Schema(
     // Appointment date and time (in vendor's timezone)
     date: {
       type: String, // Format: YYYY-MM-DD
+      match: /^\d{4}-\d{2}-\d{2}$/,
       required: true,
+      index: true,
     },
     time: {
       start: { type: Date, required: true }, // UTC
       end: { type: Date, required: true },
     },
-    //
     timezone: {
       type: String,
       required: true,
-    },
+    }, // IANA format
     // Booking status
     status: {
       type: String,
       enum: ["upcoming", "completed", "missed", "cancelled", "rescheduled"],
       default: "upcoming",
+      index: true,
     },
 
     // Payment info
@@ -70,13 +72,13 @@ const bookingSchema = new mongoose.Schema(
           amount: Number,
           method: String, // online/offline
           provider: String,
-          date: Date,
+          date: { type: Date, default: Date.now },
           note: String,
           transactionId: String, // optional
         },
       ],
     },
-    balanceAmount: { type: Number, default: false },
+    balanceAmount: { type: Number, default: 0 },
 
     // Reminder status
     reminderStages: {
@@ -92,14 +94,23 @@ const bookingSchema = new mongoose.Schema(
         enum: ["none", "daily", "weekly", "monthly"],
         default: "none",
       },
-      interval: { type: Number },
-      endDate: { type: String }, // Format: YYYY-MM-DD
+      interval: { type: Number, min: 1 },
+      endDate: { type: Date }, // Format: YYYY-MM-DD
     },
     // Additional notes or instructions for the booking
     notes: {
       type: String,
       trim: true,
     },
+    cancellationReason: { type: String, trim: true },
+    rescheduleHistory: [
+      {
+        oldStart: Date,
+        oldEnd: Date,
+        changedAt: { type: Date, default: Date.now },
+        reason: String,
+      },
+    ],
     createdBy: {
       type: String,
       enum: ["client", "vendor", "staff"],
@@ -111,6 +122,10 @@ const bookingSchema = new mongoose.Schema(
     timestamps: true,
   }
 );
+
+// Indexes for frequent queries
+bookingSchema.index({ vendorId: 1, date: 1, status: 1 });
+bookingSchema.index({ "client.email": 1 });
 
 const Booking = mongoose.model("Booking", bookingSchema);
 module.exports = Booking;
