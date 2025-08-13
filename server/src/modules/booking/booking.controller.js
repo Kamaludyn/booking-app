@@ -284,4 +284,49 @@ const updateBooking = asyncHandler(async (req, res) => {
   });
 });
 
-module.exports = { createBooking, getBookings, getBooking, updateBooking };
+//  @desc    Delete a booking (soft delete by changing status)
+//  @route   DELETE /api/v1/bookings/:bookingId
+//  @access  Private
+const deleteBooking = asyncHandler(async (req, res) => {
+  const { bookingId } = req.params;
+  const { role, userId } = req.user;
+
+  // Find booking
+  const booking = await Booking.findById(bookingId);
+  if (!booking) {
+    return res.status(404).json({ message: "Booking not found" });
+  }
+
+  // Authorization checks
+  if (role === "client" && booking.client.id.toString() !== userId) {
+    return res.status(403).json({ message: "Not authorized as client" });
+  }
+  if (role === "vendor" && booking.vendorId.toString() !== userId) {
+    return res.status(403).json({ message: "Not authorized as vendor" });
+  }
+
+  // Prevent cancelling completed or past bookings
+  const now = new Date();
+  if (booking.status === "completed" || booking.date < now) {
+    return res
+      .status(400)
+      .json({ message: "Cannot cancel completed or past bookings" });
+  }
+
+  // Soft delete / set status
+  booking.status = "cancelled";
+  await booking.save();
+
+  res.status(200).json({
+    message: "Booking cancelled successfully",
+    booking,
+  });
+});
+
+module.exports = {
+  createBooking,
+  getBookings,
+  getBooking,
+  updateBooking,
+  deleteBooking,
+};

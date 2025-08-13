@@ -18,4 +18,7 @@ router.get("/:bookingId", bookingController.getBooking);
 // @route   PATCH /api/v1/bookings/:bookingId
 router.patch("/:bookingId", bookingController.updateBooking);
 
+// @route   DELETE /api/v1/bookings/:bookingId
+router.delete("/:bookingId", bookingController.deleteBooking);
+
 module.exports = router;
