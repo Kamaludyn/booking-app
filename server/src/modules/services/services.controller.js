@@ -6,8 +6,15 @@ const asyncHandler = require("express-async-handler");
 // @access  Private (Vendor)
 const createService = asyncHandler(async (req, res) => {
   const vendorId = req.user.userId;
-  const { name, description, duration, price, isActive, requireDeposit } =
-    req.body;
+  const {
+    name,
+    description,
+    duration,
+    price,
+    isActive,
+    requireDeposit,
+    depositAmount,
+  } = req.body;
 
   // Validate required fields
   if (!name || !description || !duration || !price) {
@@ -23,6 +30,7 @@ const createService = asyncHandler(async (req, res) => {
     price,
     isActive,
     requireDeposit,
+    depositAmount,
   });
 
   res.status(201).json({

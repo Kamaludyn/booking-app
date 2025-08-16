@@ -32,6 +32,10 @@ const serviceShema = new mongoose.Schema(
       type: Boolean,
       default: false,
     },
+    depositAmount: {
+      type: Number,
+      default: 0,
+    },
     bufferTime: {
       type: Number,
       default: 10,
