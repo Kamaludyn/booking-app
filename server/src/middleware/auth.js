@@ -1,4 +1,4 @@
-const jwt = require("../utils/jwt");
+const jwt = require("../lib/jwt");
 
 // Middleware to authenticate users based on JWT
 const authenticate = (req, res, next) => {

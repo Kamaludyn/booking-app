@@ -14,10 +14,11 @@ const createService = asyncHandler(async (req, res) => {
     isActive,
     requireDeposit,
     depositAmount,
+    currency,
   } = req.body;
 
   // Validate required fields
-  if (!name || !description || !duration || !price) {
+  if (!name || !description || !duration || !price || !currency) {
     return res.status(400).json({ message: "Missing required fields" });
   }
 
@@ -31,6 +32,7 @@ const createService = asyncHandler(async (req, res) => {
     isActive,
     requireDeposit,
     depositAmount,
+    currency,
   });
 
   res.status(201).json({

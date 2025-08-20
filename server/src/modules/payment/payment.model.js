@@ -3,14 +3,14 @@ const mongoose = require("mongoose");
 const PaymentSchema = new mongoose.Schema(
   {
     bookingId: {
-      type: Schema.Types.ObjectId,
+      type: mongoose.Schema.Types.ObjectId,
       ref: "Booking",
       required: true,
       index: true,
     },
 
     vendorId: {
-      type: Schema.Types.ObjectId,
+      type: mongoose.Schema.Types.ObjectId,
       ref: "User",
       required: true,
       index: true,
@@ -20,6 +20,11 @@ const PaymentSchema = new mongoose.Schema(
       type: Number,
       required: true,
       validate: (v) => Number.isFinite(v) && v > 0,
+    },
+
+    currency: {
+      type: String,
+      required: true,
     },
 
     method: {
@@ -53,7 +58,7 @@ const PaymentSchema = new mongoose.Schema(
     },
 
     // Raw gateway response or offline proof
-    meta: { type: Schema.Types.Mixed },
+    meta: { type: mongoose.Schema.Types.Mixed },
   },
   { timestamps: true }
 );

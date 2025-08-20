@@ -7,6 +7,7 @@ const bookingSchema = new mongoose.Schema(
       type: mongoose.Schema.Types.ObjectId,
       ref: "User",
       required: true,
+      index: true,
     },
 
     // Reference to the service being booked
@@ -41,6 +42,7 @@ const bookingSchema = new mongoose.Schema(
       type: String,
       required: true,
     }, // IANA format
+
     // Booking status
     status: {
       type: String,
@@ -56,30 +58,12 @@ const bookingSchema = new mongoose.Schema(
         enum: ["unpaid", "partial", "paid"],
         default: "unpaid",
       },
-      method: {
-        type: String,
-        enum: ["online", "offline"],
-        default: "online",
-      },
-      provider: {
-        type: String,
-        enum: ["stripe", "paypal", "paystack", "manual", null],
-        default: "stripe",
-      },
-      amountPaid: { type: Number, default: 0 },
-      history: [
-        {
-          amount: Number,
-          method: String, // online/offline
-          provider: String,
-          date: { type: Date, default: Date.now },
-          note: String,
-          transactionId: String, // optional
-        },
-      ],
+      balanceAmount: { type: Number, default: 0 },
     },
-    balanceAmount: { type: Number, default: 0 },
-
+    currency: {
+      type: String,
+      required: true,
+    },
     // Reminder status
     reminderStages: {
       at24h: { type: Boolean, default: false },

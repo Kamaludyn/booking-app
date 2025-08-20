@@ -1,7 +1,7 @@
 const VendorProfile = require("./vendor.model.js");
 const asyncHandler = require("express-async-handler");
 const cloudinary = require("../../config/cloudinary");
-const { extractPublicId } = require("../../utils/cloudinary");
+const { extractPublicId } = require("../../lib/cloudinary");
 
 //  @desc    Create Vendor Profile
 //  @route   POST /api/v1/vendor

@@ -1,9 +1,9 @@
-const jwt = require("../../utils/jwt.js");
+const jwt = require("../../lib/jwt.js");
 const bcrypt = require("bcryptjs");
 const crypto = require("crypto");
 const asyncHandler = require("express-async-handler");
 const User = require("./auth.model.js");
-const sendEmail = require("../../utils/sendEmail");
+const sendEmail = require("../../lib/sendEmail.js");
 
 //  @desc    Registers a new user
 //  @route   POST /api/v1/auth/register/:role

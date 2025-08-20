@@ -1,6 +1,6 @@
 const mongoose = require("mongoose");
 
-const serviceShema = new mongoose.Schema(
+const serviceSchema = new mongoose.Schema(
   {
     vendorId: {
       type: mongoose.Schema.Types.ObjectId,
@@ -24,6 +24,10 @@ const serviceShema = new mongoose.Schema(
       type: Number,
       required: true,
     },
+    currency: {
+      type: String,
+      required: true,
+    },
     isActive: {
       type: Boolean,
       default: true,
@@ -44,6 +48,6 @@ const serviceShema = new mongoose.Schema(
   { timeStamps: true }
 );
 
-const Service = mongoose.model("Service", serviceShema);
+const Service = mongoose.model("Service", serviceSchema);
 
 module.exports = Service;

@@ -1,7 +1,7 @@
 const { DateTime } = require("luxon");
 const Booking = require("./booking.model.js");
-const sendReminderEmail = require("../../utils/sendReminderEmail.js");
-const sendVendorPromptEmail = require("../../utils/sendVendorPromptEmail.js");
+const sendReminderEmail = require("../../lib/sendReminderEmail.js");
+const sendVendorPromptEmail = require("../../lib/sendVendorPromptEmail.js");
 const Vendor = require("../auth/auth.model.js");
 
 const REMINDER_INTERVAL_MINUTES = 10;

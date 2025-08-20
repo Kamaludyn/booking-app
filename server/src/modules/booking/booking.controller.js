@@ -2,8 +2,9 @@ const Booking = require("./booking.model");
 const Service = require("../services/services.model");
 const User = require("../auth/auth.model");
 const asyncHandler = require("express-async-handler");
-const generateBookableSlots = require("../../utils/generateBookableSlots");
+const generateBookableSlots = require("./generateBookableSlots.service");
 const toUtcDate = require("../../utils/convertTime");
+const createPayment = require("../payment/createPayment.service");
 
 //  @desc    Creates a new booking
 //  @route   POST /api/v1/bookings
@@ -19,8 +20,8 @@ const createBooking = asyncHandler(async (req, res) => {
     timezone,
     notes,
     recurrence,
-    payment,
     createdBy,
+    payment,
   } = req.body;
 
   if (!serviceId || !client || !date || !time || !timezone || !createdBy) {
@@ -43,38 +44,44 @@ const createBooking = asyncHandler(async (req, res) => {
     }
   }
 
-  // Fetch service to check existence and pricing/deposit requirement
+  // Fetch service
   const service = await Service.findById(serviceId);
   if (!service) {
     return res.status(404).json({ message: "Service not found." });
   }
 
-  const servicePrice = service.price;
-  const amountPaid = payment?.amountPaid || 0;
-  let paymentMethod = payment?.method || "online";
-  let paymentProvider = payment?.provider || "stripe";
-
-  // Handle deposit requirement for services that need it
+  // If deposit is required, delegate to payment service (pre-booking flow)
   if (service.requireDeposit) {
-    if (paymentMethod === "offline") {
+    if (!payment) {
       return res.status(400).json({
-        message: "Offline payment not allowed for services requiring a deposit",
+        message: "Payment details are required for this service.",
       });
     }
+    const { payment: payDoc, booking } = await createPayment({
+      serviceId,
+      amount: payment.amount,
+      method: payment.method,
+      provider: payment.provider,
+      idempotencyKey: payment.idempotencyKey,
+      meta: payment.meta,
+      bookingPayload: {
+        client,
+        date,
+        time,
+        timezone,
+        notes,
+        recurrence,
+        createdBy,
+      },
+    });
 
-    //  Validate minimum deposit amount
-    const minDeposit = service.depositAmount || servicePrice * 0.25; // min of 25%
-    if (amountPaid < minDeposit) {
-      return res.status(400).json({
-        message: `Minimum deposit of ${minDeposit} required`,
-        requiredDeposit: minDeposit,
-      });
-    }
+    return res.status(201).json({
+      success: true,
+      message: "Booking created with payment",
+      booking,
+      payment: payDoc,
+    });
   }
-
-  // Determine payment status
-  const paymentStatus =
-    amountPaid >= servicePrice ? "paid" : amountPaid > 0 ? "partial" : "unpaid";
 
   // Validate recurrence if provided
   if (recurrence?.repeat && recurrence.repeat !== "none") {
@@ -136,28 +143,9 @@ const createBooking = asyncHandler(async (req, res) => {
     status: "upcoming",
     payment: {
       status: paymentStatus,
-      method: paymentMethod,
-      provider: paymentProvider,
-      amountPaid,
-      history:
-        amountPaid > 0
-          ? [
-              {
-                amount: amountPaid,
-                method: paymentMethod,
-                provider: paymentProvider,
-                date: new Date(),
-                note: payment?.note || "",
-                transactionId: payment?.transactionId || "",
-              },
-            ]
-          : [],
+      balanceAmount: service.price, // Initial balance is the full service price
     },
-    balanceAmount: paymentStatus === "partial" ? servicePrice - amountPaid : 0,
-    reminder: {
-      sent: false,
-      sentAt: null,
-    },
+    currency: service.currency,
     recurrence: recurrence || {
       repeat: "none",
     },

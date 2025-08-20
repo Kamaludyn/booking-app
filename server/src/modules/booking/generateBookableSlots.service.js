@@ -1,5 +1,5 @@
-const Booking = require("../modules/booking/booking.model");
-const Availability = require("../modules/availability/availability.model");
+const Booking = require("./booking.model");
+const Availability = require("../availability/availability.model");
 const { DateTime } = require("luxon");
 
 /**
@@ -114,7 +114,6 @@ const generateBookableSlots = async (date, totalServiceDuration, vendorId) => {
       current = next;
     }
 
-    console.log("Available slots:", slots);
     return slots;
   } catch (error) {
     if (process.env.NODE_ENV === "development") {
