@@ -35,18 +35,11 @@ const processPayment = asyncHandler(async (req, res) => {
 });
 
 // @desc    Get single payment by ID
-// @route   GET /api/v1/payments/:paymentId
+// @route   GET /api/v1/payment/:paymentId
 // @access  Vendor
 const getPaymentById = asyncHandler(async (req, res) => {
   const { paymentId } = req.params;
-  const { role } = req.user;
-
-  // Check if the user is a vendor
-  if (role !== "vendor") {
-    return res.status(403).json({
-      message: "Access denied",
-    });
-  }
+  const { userId, role } = req.user;
 
   // Find payment and populate booking and vendor details
   const payment = await Payment.findById(paymentId)
@@ -60,13 +53,67 @@ const getPaymentById = asyncHandler(async (req, res) => {
     });
   }
 
+  // Validate vendor
+  if (
+    role !== "vendor" &&
+    payment.vendorId._id.toString() !== userId.toString()
+  ) {
+    return res.status(403).json({
+      message: "Access denied",
+    });
+  }
+
   res.status(200).json({
-    success: true,
-    data: payment,
+    message: "Payment fetched successfully",
+    payment,
+  });
+});
+
+// @desc    Get all payments for a specific booking
+// @route   GET /api/v1/payment/booking/:bookingId
+// @access  Public
+const getPaymentsByBooking = asyncHandler(async (req, res) => {
+  const { bookingId } = req.params;
+  const { userId, role } = req.user;
+
+  // Find all payments for the booking
+  const payments = await Payment.find({ bookingId })
+    .populate("bookingId", "serviceId date time client vendorId")
+    .populate("vendorId", "name email")
+    .sort({ createdAt: -1 });
+
+  // Check if payments exist
+  if (!payments || payments.length === 0) {
+    return res.status(404).json({
+      success: false,
+      message: "No payments found for this booking",
+    });
+  }
+
+  const booking = payments[0].bookingId;
+
+  // Authorization checks
+  if (role === "vendor" && booking.vendorId.toString() !== userId.toString()) {
+    return res.status(403).json({
+      message: "Not authorized to view these payments",
+    });
+  }
+
+  if (role === "client" && booking.client.id.toString() !== userId.toString()) {
+    return res.status(403).json({
+      message: "Not authorized to view these payments",
+    });
+  }
+
+  res.status(200).json({
+    message: "All payments fetched successfully",
+    count: payments.length,
+    payments,
   });
 });
 
 module.exports = {
   processPayment,
   getPaymentById,
+  getPaymentsByBooking,
 };
