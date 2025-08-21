@@ -9,4 +9,7 @@ router.use(protect);
 // @route   POST /api/v1/payment
 router.post("/", paymentController.processPayment);
 
+// @route   GET /api/v1/payment/:paymentId
+router.get("/:paymentId", paymentController.getPaymentById);
+
 module.exports = router;
