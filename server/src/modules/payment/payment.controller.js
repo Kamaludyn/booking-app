@@ -112,8 +112,34 @@ const getPaymentsByBooking = asyncHandler(async (req, res) => {
   });
 });
 
+// @desc    Get all payment related to the authenticated user
+// @route   GET /api/v1/payments/me
+// @access  Vendor
+const getMyPayments = asyncHandler(async (req, res) => {
+  const { userId, role } = req.user;
+
+  let payments = [];
+
+  if (role === "vendor") {
+    payments = await Payment.find({ vendorId: userId }).sort({ createdAt: -1 });
+  } else if (role === "client") {
+    payments = await Payment.find({ clientId: userId }).sort({ createdAt: -1 });
+  } else {
+    return res.status(403).json({
+      message: "Not authorized to view payments",
+    });
+  }
+
+  res.status(200).json({
+    message: "Payments fetched successfully",
+    count: payments.length,
+    payments,
+  });
+});
+
 module.exports = {
   processPayment,
   getPaymentById,
   getPaymentsByBooking,
+  getMyPayments,
 };
