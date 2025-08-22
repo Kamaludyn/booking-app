@@ -1,4 +1,5 @@
 const Payment = require("./payment.model");
+const Booking = require("../booking/booking.model");
 const asyncHandler = require("express-async-handler");
 const createPayment = require("./createPayment.service.js");
 
@@ -54,10 +55,7 @@ const getPaymentById = asyncHandler(async (req, res) => {
   }
 
   // Validate vendor
-  if (
-    role !== "vendor" &&
-    payment.vendorId._id.toString() !== userId.toString()
-  ) {
+  if (role !== "vendor" && payment.vendorId.toString() !== userId.toString()) {
     return res.status(403).json({
       message: "Access denied",
     });
@@ -120,6 +118,7 @@ const getMyPayments = asyncHandler(async (req, res) => {
 
   let payments = [];
 
+  // Get payments based on user role
   if (role === "vendor") {
     payments = await Payment.find({ vendorId: userId }).sort({ createdAt: -1 });
   } else if (role === "client") {
@@ -137,9 +136,107 @@ const getMyPayments = asyncHandler(async (req, res) => {
   });
 });
 
+// @desc    Update payment status (and related booking if needed)
+// @route   PATCH /api/v1/payments/:paymentId/status
+// @access  Vendor
+const updatePaymentStatus = asyncHandler(async (req, res) => {
+  const { paymentId } = req.params;
+  const { status, notes } = req.body;
+  const { userId, role } = req.user;
+
+  // Validate input
+  if (!status) {
+    return res.status(400).json({
+      message: "Status is required",
+    });
+  }
+
+  // Restrict clients from making updates
+  if (role === "client") {
+    return res
+      .status(403)
+      .json({ message: "Clients cannot update online payments manually" });
+  }
+
+  // Fetch payment details
+  const payment = await Payment.findById(paymentId).populate(
+    "bookingId",
+    "vendorId status"
+  );
+
+  if (!payment) {
+    return res.status(404).json({ message: "Payment not found" });
+  }
+
+  // Authorization checks
+  if (payment.method === "offline" && role !== "vendor") {
+    return res
+      .status(403)
+      .json({ message: "Only vendor can update offline payments" });
+  }
+
+  if (
+    role === "vendor" &&
+    payment.bookingId.vendorId.toString() !== userId.toString()
+  ) {
+    return res
+      .status(403)
+      .json({ message: "Not authorized to update this payment" });
+  }
+
+  // Validate allowed status
+  const validStatuses = ["pending", "paid", "failed", "refunded"];
+  if (status && !validStatuses.includes(status)) {
+    return res.status(400).json({ message: "Invalid payment status" });
+  }
+
+  // Prevent illegal transitions
+  const currentStatus = payment.status;
+  const method = payment.method;
+
+  const booking = payment.bookingId;
+  // payment.status = status;
+  if (method === "offline" || method === "online") {
+    if (currentStatus === "pending") {
+      if (status === "paid") {
+        payment.status = "paid";
+      } else if (status === "failed") {
+        payment.status = "failed";
+        if (booking.status === "upcoming") {
+          booking.status = "cancelled";
+          await booking.save();
+        }
+      } else {
+        return res.status(400).json({
+          message: `Invalid status transition for ${method} payment`,
+        });
+      }
+    } else if (currentStatus === "paid" && status === "refunded") {
+      payment.status = "refunded";
+      if (booking.status === "upcoming") {
+        booking.status = "cancelled";
+        await booking.save();
+      }
+    } else {
+      return res.status(400).json({
+        message: `Invalid status transition for ${method} payment`,
+      });
+    }
+  }
+
+  if (notes) payment.notes = notes;
+  await payment.save();
+
+  res.status(200).json({
+    message: "Payment updated successfully",
+    payment,
+  });
+});
+
 module.exports = {
   processPayment,
   getPaymentById,
   getPaymentsByBooking,
   getMyPayments,
+  updatePaymentStatus,
 };
