@@ -2,6 +2,7 @@ const Payment = require("./payment.model");
 const Booking = require("../booking/booking.model");
 const asyncHandler = require("express-async-handler");
 const createPayment = require("./createPayment.service.js");
+const recalcBookingPayment = require("./recalcBookingPayment.service.js");
 
 //  @desc    Process a payment
 //  @route   POST /api/v1/Payment
@@ -233,10 +234,57 @@ const updatePaymentStatus = asyncHandler(async (req, res) => {
   });
 });
 
+const addOfflinePayment = asyncHandler(async (req, res) => {
+  const { bookingId } = req.params;
+  const { amount, method, currency, notes } = req.body;
+  const { userId, role } = req.user;
+
+  if (!amount || amount <= 0)
+    return res.status(400).json({ message: "Amount is required" });
+
+  if (method !== "offline")
+    return res.status(400).json({ message: "Invalid payment method" });
+  if (!notes)
+    return res
+      .status(400)
+      .json({ message: "A notes describing payment type is required" });
+
+  const booking = await Booking.findById(bookingId);
+  if (!booking) return res.status(404).json({ message: "Booking not found" });
+
+  if (role !== "vendor" || booking.vendorId.toString() !== userId.toString())
+    return res.status(403).json({ message: "Not authorized" });
+
+  // Check if booking is already paid
+  if (amount > booking.payment.balanceAmount) {
+    return res
+      .status(400)
+      .json({ message: "Amount exceeds remaining balance" });
+  }
+
+  // Create offline payment
+  const payment = await Payment.create({
+    bookingId,
+    serviceId: booking.serviceId,
+    vendorId: userId,
+    amountPaid: amount,
+    currency,
+    method,
+    provider: "manual",
+    status: "paid",
+    notes,
+  });
+
+  await recalcBookingPayment(booking);
+
+  res.status(201).json({ success: true, payment, booking });
+});
+
 module.exports = {
   processPayment,
   getPaymentById,
   getPaymentsByBooking,
   getMyPayments,
   updatePaymentStatus,
+  addOfflinePayment,
 };

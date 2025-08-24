@@ -18,7 +18,10 @@ router.get("/booking/:bookingId", paymentController.getPaymentsByBooking);
 // @route   GET /api/v1/payment/:paymentId
 router.get("/:paymentId", paymentController.getPaymentById);
 
-// @route   PATCH /api/v1/payments/:paymentId/status
+// @route   PATCH /api/v1/payment/:paymentId/status
 router.patch("/:paymentId/status", paymentController.updatePaymentStatus);
+
+// @route   POST /api/v1/payment/:bookingId/offline
+router.post("/:bookingId/offline", paymentController.addOfflinePayment);
 
 module.exports = router;

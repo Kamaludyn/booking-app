@@ -9,6 +9,13 @@ const PaymentSchema = new mongoose.Schema(
       index: true,
     },
 
+    serviceId: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: "Service",
+      required: true,
+      index: true,
+    },
+
     vendorId: {
       type: mongoose.Schema.Types.ObjectId,
       ref: "User",
