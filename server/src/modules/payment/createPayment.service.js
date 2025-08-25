@@ -89,6 +89,7 @@ const createPayment = async ({
         [
           {
             bookingId,
+            serviceId: service._id,
             vendorId,
             amountPaid: amount,
             currency: service.currency,
@@ -114,6 +115,7 @@ const createPayment = async ({
           : "partial";
 
       booking.payment = { status: newPaymentStatus, balanceAmount };
+      booking.paidAmount = newTotalPaid;
       await booking.save({ session });
 
       await session.commitTransaction();
@@ -229,7 +231,7 @@ const createPayment = async ({
           notes,
           createdBy,
           status: "upcoming",
-          payment: { status: paymentStatus, balanceAmount },
+          payment: { status: paymentStatus, paidAmount: amount, balanceAmount },
           currency: service.currency,
           recurrence: recurrence || { repeat: "none" },
         },
@@ -241,6 +243,7 @@ const createPayment = async ({
       [
         {
           bookingId: booking._id,
+          serviceId: service._id,
           vendorId,
           amountPaid: amount,
           currency: service.currency,

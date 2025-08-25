@@ -234,11 +234,15 @@ const updatePaymentStatus = asyncHandler(async (req, res) => {
   });
 });
 
+// @desc   Add offline payment
+// @route   POST /api/v1/payments/:bookingId/offline
+// @access  Vendor
 const addOfflinePayment = asyncHandler(async (req, res) => {
   const { bookingId } = req.params;
   const { amount, method, currency, notes } = req.body;
   const { userId, role } = req.user;
 
+  // Validate inputs
   if (!amount || amount <= 0)
     return res.status(400).json({ message: "Amount is required" });
 
@@ -249,9 +253,11 @@ const addOfflinePayment = asyncHandler(async (req, res) => {
       .status(400)
       .json({ message: "A notes describing payment type is required" });
 
+  // Fetch booking
   const booking = await Booking.findById(bookingId);
   if (!booking) return res.status(404).json({ message: "Booking not found" });
 
+  // Authorization check
   if (role !== "vendor" || booking.vendorId.toString() !== userId.toString())
     return res.status(403).json({ message: "Not authorized" });
 
@@ -275,6 +281,7 @@ const addOfflinePayment = asyncHandler(async (req, res) => {
     notes,
   });
 
+  // Recalculate booking payment and status
   await recalcBookingPayment(booking);
 
   res.status(201).json({ success: true, payment, booking });
