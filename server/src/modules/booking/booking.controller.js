@@ -1,10 +1,11 @@
 const Booking = require("./booking.model");
 const Service = require("../services/services.model");
-const User = require("../auth/auth.model");
+const Payment = require("../payment/payment.model");
 const asyncHandler = require("express-async-handler");
 const generateBookableSlots = require("./generateBookableSlots.service");
 const toUtcDate = require("../../utils/convertTime");
-const createPayment = require("../payment/createPayment.service");
+const createPayment = require("../payment/services/createPayment.service");
+const calculateRefund = require("../payment/services/calcRefund.service");
 
 //  @desc    Creates a new booking
 //  @route   POST /api/v1/bookings
@@ -224,8 +225,8 @@ const getBooking = asyncHandler(async (req, res) => {
   });
 });
 
-//  @desc    Update a bookiing
-//  @route   GET /api/v1/bookings/:bookingId
+//  @desc    Update a booking
+//  @route   PATCH /api/v1/bookings/:bookingId
 //  @access  Private
 const updateBooking = asyncHandler(async (req, res) => {
   const { bookingId } = req.params;
@@ -269,6 +270,88 @@ const updateBooking = asyncHandler(async (req, res) => {
   res.status(200).json({
     message: "Booking updated successfully",
     booking,
+  });
+});
+
+//  @desc    Cancel a booking
+//  @route   PATCH /api/v1/bookings/:bookingId/cancel
+//  @access  Private
+const cancelBooking = asyncHandler(async (req, res) => {
+  const { bookingId } = req.params;
+  const { cancelledBy } = req.body;
+
+  const booking = await Booking.findById(bookingId).populate("serviceId");
+  if (!booking) {
+    return res
+      .status(404)
+      .json({ success: false, message: "Booking not found" });
+  }
+
+  // If booking already completed, or already cancelled, disallow cancellation
+  if (
+    booking.status === "completed" ||
+    booking.status === `cancelled_by_${cancelledBy}`
+  ) {
+    return res.status(400).json({
+      success: false,
+      message: "Cannot cancel completed, or already cancelled bookings",
+    });
+  }
+
+  const depositAmount = booking.serviceId.depositAmount || 0;
+  const paidAmount = booking.payment.paidAmount || 0;
+  const appointmentTime = booking.time.start;
+  const cancelTime = new Date();
+
+  // calculate refund
+  const { refundable, reason } = calculateRefund({
+    cancelledBy,
+    cancelTime,
+    appointmentTime,
+    depositAmount,
+    paidAmount,
+    serviceDelivered: booking.status === "completed",
+  });
+
+  // Create refund payment record if refundable > 0
+  let refundPayment = null;
+  if (refundable > 0) {
+    refundPayment = await Payment.create({
+      bookingId: booking._id,
+      vendorId: booking.vendorId,
+      serviceId: booking.serviceId._id,
+      amountPaid: refundable,
+      currency: booking.currency,
+      method: "online",
+      status: "refunded",
+      note: `Refund issued: ${reason}`,
+      createdAt: new Date(),
+    });
+  }
+
+  // Update booking status
+  booking.status =
+    cancelledBy === "vendor" ? "cancelled_by_vendor" : "cancelled_by_client";
+  booking.refund = {
+    amount: refundable,
+    reason,
+    processedAt: new Date(),
+  };
+  booking.payment.status = "refunded";
+  booking.payment.paidAmount = depositAmount;
+  booking.payment.balanceAmount = 0;
+  await booking.save();
+
+  return res.json({
+    success: true,
+    message: refundable > 0 ? "Refund processed" : "No refund eligible",
+    data: {
+      bookingId: booking._id,
+      newStatus: booking.status,
+      refundable,
+      reason,
+      refundPayment,
+    },
   });
 });
 
@@ -316,5 +399,6 @@ module.exports = {
   getBookings,
   getBooking,
   updateBooking,
+  cancelBooking,
   deleteBooking,
 };

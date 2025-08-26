@@ -1,4 +1,4 @@
-const Payment = require("./payment.model");
+const Payment = require("../payment.model");
 
 const recalcBookingPayment = async (booking) => {
   // Get all existing(paid/refund) payments for the booking

@@ -46,7 +46,14 @@ const bookingSchema = new mongoose.Schema(
     // Booking status
     status: {
       type: String,
-      enum: ["upcoming", "completed", "missed", "cancelled", "rescheduled"],
+      enum: [
+        "upcoming",
+        "completed",
+        "missed",
+        "cancelled_by_client",
+        "cancelled_by_vendor",
+        "rescheduled",
+      ],
       default: "upcoming",
       index: true,
     },
@@ -87,7 +94,6 @@ const bookingSchema = new mongoose.Schema(
       type: String,
       trim: true,
     },
-    cancellationReason: { type: String, trim: true },
     rescheduleHistory: [
       {
         oldStart: Date,
@@ -101,6 +107,11 @@ const bookingSchema = new mongoose.Schema(
       enum: ["client", "vendor", "staff"],
       required: true,
       default: "client",
+    },
+    refund: {
+      amount: { type: Number, default: 0 },
+      reason: { type: String },
+      processedAt: { type: Date },
     },
   },
   {

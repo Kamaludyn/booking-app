@@ -1,10 +1,10 @@
 const mongoose = require("mongoose");
-const Payment = require("./payment.model");
-const Booking = require("../booking/booking.model.js");
-const Service = require("../services/services.model");
-const generateBookableSlots = require("../booking/generateBookableSlots.service");
-const toUtcDate = require("../../utils/convertTime");
-const processMockPayment = require("../../lib/mockPaymentGateway.js");
+const Payment = require("../payment.model.js");
+const Booking = require("../../booking/booking.model.js");
+const Service = require("../../services/services.model.js");
+const generateBookableSlots = require("../../booking/generateBookableSlots.service.js");
+const toUtcDate = require("../../../utils/convertTime.js");
+const processMockPayment = require("../../../lib/mockPaymentGateway.js");
 
 const createPayment = async ({
   bookingId,
@@ -183,7 +183,9 @@ const createPayment = async ({
     slotDuration,
     vendorId
   );
+  console.log("availableSlots:", availableSlots);
   const formattedSlot = `${time.start}`.padStart(5, "0");
+  console.log("timeStart:", time.start);
   if (!availableSlots.includes(formattedSlot)) {
     const error = new Error(
       `Selected time slot (${formattedSlot}) is no longer available. Available slots are: ${availableSlots.join(
