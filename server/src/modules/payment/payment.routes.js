@@ -24,4 +24,7 @@ router.patch("/:paymentId/status", paymentController.updatePaymentStatus);
 // @route   POST /api/v1/payment/:bookingId/offline
 router.post("/:bookingId/offline", paymentController.addOfflinePayment);
 
+// GET /api/payment/reports/revenue?vendorId&startDate&endDate
+router.get("/reports/revenue", paymentController.getRevenueByVendor);
+
 module.exports = router;

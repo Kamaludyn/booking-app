@@ -3,6 +3,7 @@ const Booking = require("../booking/booking.model");
 const asyncHandler = require("express-async-handler");
 const createPayment = require("./services/createPayment.service.js");
 const recalcBookingPayment = require("./services/recalcBookingPayment.service.js");
+const { getVendorRevenue } = require("./services/paymentReports.service.js");
 
 //  @desc    Process a payment
 //  @route   POST /api/v1/Payment
@@ -317,6 +318,31 @@ const addOfflinePayment = asyncHandler(async (req, res) => {
   res.status(201).json({ success: true, payment, booking });
 });
 
+// Revenue per vendor
+const getRevenueByVendor = asyncHandler(async (req, res) => {
+  const { startDate, endDate } = req.query;
+  const { userId, role } = req.user;
+
+  // Authorization check
+  if (role !== "vendor") {
+    return res.status(403).json({ message: "Not authorized" });
+  }
+
+  // Validate date range
+  if (!startDate || !endDate) {
+    return res
+      .status(400)
+      .json({ success: false, message: "Date range is required" });
+  }
+
+  const vendorId = userId;
+  const start = new Date(startDate);
+  const end = new Date(endDate);
+
+  const revenue = await getVendorRevenue(vendorId, start, end);
+  res.json({ success: true, revenue });
+});
+
 module.exports = {
   processPayment,
   getPaymentById,
@@ -324,4 +350,5 @@ module.exports = {
   getMyPayments,
   updatePaymentStatus,
   addOfflinePayment,
+  getRevenueByVendor,
 };
