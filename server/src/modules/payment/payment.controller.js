@@ -1,8 +1,8 @@
 const Payment = require("./payment.model");
 const Booking = require("../booking/booking.model");
 const asyncHandler = require("express-async-handler");
-const createPayment = require("./createPayment.service.js");
-const recalcBookingPayment = require("./recalcBookingPayment.service.js");
+const createPayment = require("./services/createPayment.service.js");
+const recalcBookingPayment = require("./services/recalcBookingPayment.service.js");
 
 //  @desc    Process a payment
 //  @route   POST /api/v1/Payment
@@ -77,8 +77,12 @@ const getPaymentsByBooking = asyncHandler(async (req, res) => {
 
   // Find all payments for the booking
   const payments = await Payment.find({ bookingId })
-    .populate("bookingId", "serviceId date time client vendorId")
+    .populate(
+      "bookingId",
+      "serviceId date time client vendorId currency payment"
+    )
     .populate("vendorId", "name email")
+    .populate("serviceId", "name price")
     .sort({ createdAt: -1 });
 
   // Check if payments exist
@@ -104,9 +108,35 @@ const getPaymentsByBooking = asyncHandler(async (req, res) => {
     });
   }
 
+  let totalPaid = 0;
+  let totalRefunded = 0;
+
+  // Calculate total paid and refunded amounts
+  payments.forEach((p) => {
+    if (p.status === "paid") {
+      totalPaid += p.amountPaid;
+    } else if (p.status === "refunded") {
+      totalRefunded += p.amountPaid;
+    }
+  });
+
+  const servicePrice = payments[0].serviceId?.price || 0;
+
+  const remainingBalance = Math.max(servicePrice - totalPaid, 0);
+
+  // Build transaction summary
+  const summary = {
+    servicePrice,
+    totalPaid,
+    totalRefunded,
+    remainingBalance,
+    currency: booking.currency,
+  };
+
   res.status(200).json({
     message: "All payments fetched successfully",
     count: payments.length,
+    summary,
     payments,
   });
 });
