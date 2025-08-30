@@ -1,10 +1,8 @@
 const Payment = require("../payment.model");
+const Booking = require("../../booking/booking.model");
 const mongoose = require("mongoose");
 
-/**
- * Revenue per vendor within a date range
- * Includes only successful "paid" payments.
- */
+// Revenue per vendor within a date range
 const getRevenue = async (vendorId, from, to) => {
   //  Build the initial $match stage
   const matchStage = {
@@ -31,6 +29,7 @@ const getRevenue = async (vendorId, from, to) => {
         _id: "$vendorId", // Group by vendorId
         totalRevenue: { $sum: "$amountPaid" }, // Sum of all amounts paid for this vendor
         totalPayments: { $sum: 1 }, // Count of payments (each doc = 1 payment)
+        payments: { $push: "$$ROOT" },
       },
     },
     // Third stage: reshape the output to a cleaner format
@@ -40,6 +39,7 @@ const getRevenue = async (vendorId, from, to) => {
         vendorId: "$_id", // Rename grouped _id back to vendorId
         totalRevenue: 1, // Keep total revenue field
         totalPayments: 1, // Keep total payments count
+        payments: 1, // Keep payments array
       },
     },
   ]);
@@ -47,16 +47,12 @@ const getRevenue = async (vendorId, from, to) => {
   return result.length > 0 ? result[0] : { totalRevenue: 0, payments: [] };
 };
 
-/**
- * Total refunds issued
- * Can be global (admin) or filtered by vendor.
- */
-const getRefunds = async (from, to, vendorId) => {
+// Refunds issued by a vendor within a date range
+const getRefunds = async (vendorId, from, to) => {
   const matchStage = {
     vendorId: new mongoose.Types.ObjectId(vendorId),
     status: "refunded",
   };
-
   if (
     (from instanceof Date && !isNaN(from)) ||
     (to instanceof Date && !isNaN(to))
@@ -81,7 +77,42 @@ const getRefunds = async (from, to, vendorId) => {
   return result.length > 0 ? result[0] : { totalRefunds: 0, refunds: [] };
 };
 
+// Total Unsettled balances
+const getBalance = async (vendorId) => {
+  const result = await Booking.aggregate([
+    {
+      $match: {
+        vendorId: new mongoose.Types.ObjectId(vendorId),
+        "payment.status": { $in: ["pending", "partial"] },
+        balanceAmount: { $gt: 0 },
+      },
+    },
+    {
+      $group: {
+        _id: "$vendorId",
+        totalUnsettled: { $sum: "$balanceAmount" },
+        unsettledCount: { $sum: 1 },
+        UnsettledBookings: { $push: "$$ROOT" },
+      },
+    },
+    {
+      $project: {
+        _id: 0,
+        vendorId: "$_id",
+        totalUnsettled: 1,
+        unsettledCount: 1,
+        unsettledBookings: 1,
+      },
+    },
+  ]);
+
+  return result.length > 0
+    ? result[0]
+    : { totalUnsettled: 0, unsettledCount: 0 };
+};
+
 module.exports = {
   getRevenue,
   getRefunds,
+  getBalance,
 };

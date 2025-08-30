@@ -12,11 +12,14 @@ router.post("/", paymentController.processPayment);
 // @route   GET /api/v1/payment/me
 router.get("/me", paymentController.getMyPayments);
 
-// GET /api/payment/revenue?vendorId&startDate&endDate
-router.get("/reports/revenue", paymentController.getTotalRevenue);
+// GET /api/v1/payment/refunds?vendorId&startDate&endDate
+router.get("/refunds", paymentController.getTotalRefunds);
 
-// GET /api/payment/refunds?vendorId&startDate&endDate
-router.get("/reports/refunds", paymentController.getTotalRefunds);
+// GET /api/v1/payment/revenue?vendorId&startDate&endDate
+router.get("/revenue", paymentController.getTotalRevenue);
+
+// GET /api/v1/payment/balance
+router.get("/balance", paymentController.getUnsettledBalance);
 
 // @route   GET /api/v1/payment/booking/:bookingId
 router.get("/booking/:bookingId", paymentController.getPaymentsByBooking);

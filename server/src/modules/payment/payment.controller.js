@@ -6,6 +6,7 @@ const recalcBookingPayment = require("./services/recalcBookingPayment.service.js
 const {
   getRevenue,
   getRefunds,
+  getBalance,
 } = require("./services/paymentReports.service.js");
 
 //  @desc    Process a payment
@@ -321,7 +322,7 @@ const addOfflinePayment = asyncHandler(async (req, res) => {
   res.status(201).json({ success: true, payment, booking });
 });
 
-// @desc   Get Total revenue per vendor (with optional date range)
+// @desc   Get Total revenue (with optional date range)
 // @route   GET /api/v1/payments/revenue?vendorId&startDate&endDate
 // @access  Vendor
 const getTotalRevenue = asyncHandler(async (req, res) => {
@@ -341,7 +342,7 @@ const getTotalRevenue = asyncHandler(async (req, res) => {
   res.json({ success: true, revenue });
 });
 
-// @desc   Get Total refunds per vendor (with optional date range)
+// @desc   Get Total refunds (with optional date range)
 // @route   GET /api/v1/payments/refunds?vendorId&startDate&endDate
 // @access  Vendor
 const getTotalRefunds = asyncHandler(async (req, res) => {
@@ -361,6 +362,23 @@ const getTotalRefunds = asyncHandler(async (req, res) => {
   res.json({ success: true, refunds });
 });
 
+// @desc   Get Total balance
+// @route   GET /api/v1/payments/balance
+// @access  Vendor
+const getUnsettledBalance = asyncHandler(async (req, res) => {
+  const { userId, role } = req.user;
+
+  // Authorization check
+  if (role !== "vendor") {
+    return res.status(403).json({ message: "Not authorized" });
+  }
+
+  const vendorId = userId;
+
+  const unsettledBalances = await getBalance(vendorId);
+  res.json({ success: true, unsettledBalances });
+});
+
 module.exports = {
   processPayment,
   getPaymentById,
@@ -370,4 +388,5 @@ module.exports = {
   addOfflinePayment,
   getTotalRevenue,
   getTotalRefunds,
+  getUnsettledBalance,
 };
