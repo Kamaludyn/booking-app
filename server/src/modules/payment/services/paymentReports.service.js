@@ -49,10 +49,13 @@ const getRevenue = async (vendorId, from, to) => {
 
 // Refunds issued by a vendor within a date range
 const getRefunds = async (vendorId, from, to) => {
+  //  Build the initial $match stage
   const matchStage = {
     vendorId: new mongoose.Types.ObjectId(vendorId),
     status: "refunded",
   };
+
+  // Add date range to matchStage if provided
   if (
     (from instanceof Date && !isNaN(from)) ||
     (to instanceof Date && !isNaN(to))
@@ -62,14 +65,24 @@ const getRefunds = async (vendorId, from, to) => {
     if (to) matchStage.createdAt.$lte = to;
   }
 
+  // Run aggregation pipeline
   const result = await Payment.aggregate([
     { $match: matchStage },
     {
       $group: {
-        _id: vendorId ? "$vendorId" : null,
-        totalRefunds: { $sum: "$amountPaid" },
-        totalRefundCount: { $sum: 1 },
-        refunds: { $push: "$$ROOT" },
+        _id: "$vendorId", // Group by vendorId
+        totalRefunds: { $sum: "$amountPaid" }, // sum all refunds
+        totalRefundCount: { $sum: 1 }, // refunds count
+        refunds: { $push: "$$ROOT" }, // keep all refund documents
+      },
+    },
+    {
+      $project: {
+        _id: 0, // Remove the MongoDB default _id
+        vendorId: "$_id", // Rename grouped _id back to vendorId
+        totalRefunds: 1, // Keep total refunds field
+        totalRefundsCount: 1, // Keep total refunds count
+        refunds: 1, // Keep refunds array
       },
     },
   ]);
@@ -92,7 +105,7 @@ const getBalance = async (vendorId) => {
         _id: "$vendorId",
         totalUnsettled: { $sum: "$balanceAmount" },
         unsettledCount: { $sum: 1 },
-        UnsettledBookings: { $push: "$$ROOT" },
+        unsettledBookings: { $push: "$$ROOT" },
       },
     },
     {
