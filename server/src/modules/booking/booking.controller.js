@@ -6,6 +6,7 @@ const generateBookableSlots = require("./generateBookableSlots.service");
 const toUtcDate = require("../../utils/convertTime");
 const createPayment = require("../payment/services/createPayment.service");
 const calculateRefund = require("../payment/services/calcRefund.service");
+const sendNotification = require("../notifications/notifications.services");
 
 //  @desc    Creates a new booking
 //  @route   POST /api/v1/bookings
@@ -114,6 +115,13 @@ const createBooking = asyncHandler(async (req, res) => {
     vendorId
   );
 
+  // Validate available slots
+  if (!availableSlots) {
+    return res.status(500).json({
+      message: "Error generating available time slots.",
+    });
+  }
+
   // Format the selected time slot to match the available slots
   const formattedSlot = `${time.start}`.padStart(5, "0");
 
@@ -143,13 +151,35 @@ const createBooking = asyncHandler(async (req, res) => {
     createdBy,
     status: "upcoming",
     payment: {
-      status: paymentStatus,
+      status: "pending",
       balanceAmount: service.price, // Initial balance is the full service price
     },
     currency: service.currency,
     recurrence: recurrence || {
       repeat: "none",
     },
+  });
+
+  // Send notification to user
+  if (booking.client.id !== null) {
+    await sendNotification({
+      userId: booking.client?.id,
+      bookingId: booking._id,
+      type: "BOOKING_CONFIRMED",
+      channels: ["email", "inapp"],
+      subject: "Booking Confirmation",
+      message: `Your booking for ${service.name} on ${date} at ${time.start} has been confirmed.`,
+    });
+  }
+
+  // Send notification to vendor
+  await sendNotification({
+    userId: booking.vendorId,
+    bookingId: booking._id,
+    type: "BOOKING_CONFIRMED",
+    channels: ["email", "inapp"],
+    subject: "Booking Confirmation",
+    message: `A new booking for ${service.name} has been confirmed for ${date} at ${time.start}.`,
   });
 
   res.status(201).json({

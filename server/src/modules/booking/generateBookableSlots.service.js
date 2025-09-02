@@ -124,6 +124,8 @@ const generateBookableSlots = async (date, totalServiceDuration, vendorId) => {
     } else {
       console.error("Slot generation failed:", error.message);
     }
+    // Rethrow the error to be handled by the global error handler
+    throw error;
   }
 };
 

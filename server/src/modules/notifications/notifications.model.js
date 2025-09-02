@@ -34,6 +34,7 @@ const notificationSchema = new mongoose.Schema(
 
     sent: { type: Boolean, default: false },
     sentAt: Date,
+    error: String,
   },
   { timestamps: true }
 );
