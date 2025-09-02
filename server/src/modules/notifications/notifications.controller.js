@@ -3,6 +3,9 @@ const User = require("../auth/auth.model");
 const asyncHandler = require("express-async-handler");
 const sendEmail = require("../../lib/sendEmail");
 
+//  @desc    Sends notifications to users via specified channels
+//  @route   POST /api/v1/notifications
+//  @access  Private
 const sendNotifications = asyncHandler(async (req, res) => {
   const { userId, bookingId, type, channels = [], subject, message } = req.body;
 
@@ -55,6 +58,21 @@ const sendNotifications = asyncHandler(async (req, res) => {
   res.status(200).json({ success: true, notifResults });
 });
 
+//  @desc    Get notifications
+//  @route   GET /api/v1/notifications
+//  @access  Private
+const getNotifications = asyncHandler(async (req, res) => {
+  const { userId } = req.user;
+
+  // Fetch notifications from the database
+  const notifs = await Notification.find({ userId }).sort({
+    createdAt: -1,
+  });
+
+  res.status(200).json({ success: true, notifs });
+});
+
 module.exports = {
   sendNotifications,
+  getNotifications,
 };
