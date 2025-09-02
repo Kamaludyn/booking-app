@@ -11,4 +11,7 @@ router.post("/", notificationsController.sendNotifications);
 // @route   GET /api/v1/notifications
 router.get("/", notificationsController.getNotifications);
 
+// @route   GET /api/v1/notifications/:notificationId
+router.get("/:notificationId", notificationsController.getNotificationById);
+
 module.exports = router;

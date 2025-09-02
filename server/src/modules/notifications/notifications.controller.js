@@ -72,7 +72,20 @@ const getNotifications = asyncHandler(async (req, res) => {
   res.status(200).json({ success: true, notifs });
 });
 
+//  @desc    Get a single notification
+//  @route   GET /api/v1/notification
+//  @access  Private
+const getNotificationById = asyncHandler(async (req, res) => {
+  const { notificationId } = req.params;
+
+  // Fetch notifications from the database
+  const notif = await Notification.findById(notificationId);
+
+  res.status(200).json({ success: true, notif });
+});
+
 module.exports = {
   sendNotifications,
   getNotifications,
+  getNotificationById,
 };
