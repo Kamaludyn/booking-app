@@ -310,6 +310,10 @@ const cancelBooking = asyncHandler(async (req, res) => {
   const { bookingId } = req.params;
   const { cancelledBy } = req.body;
 
+  if (!["client", "vendor"].includes(cancelledBy)) {
+    return res.status(400).json({ message: "Unauthorized" });
+  }
+
   const booking = await Booking.findById(bookingId).populate("serviceId");
   if (!booking) {
     return res
@@ -372,6 +376,25 @@ const cancelBooking = asyncHandler(async (req, res) => {
   booking.payment.balanceAmount = 0;
   await booking.save();
 
+  if (cancelledBy === "vendor" && booking.client.id !== null) {
+    await sendNotification({
+      userId: booking.client.id,
+      bookingId: booking._id,
+      type: "BOOKING_CANCELLED",
+      channels: ["email", "inapp"],
+      subject: "Booking Cancellation",
+      message: `A booking for ${booking.serviceId.name} has been cancelled.`,
+    });
+  } else if (cancelledBy === "client") {
+    await sendNotification({
+      userId: booking.vendorId,
+      bookingId: booking._id,
+      type: "BOOKING_CANCELLED",
+      channels: ["email", "inapp"],
+      subject: "Booking Cancellation",
+      message: `A booking for ${booking.serviceId.name} has been cancelled.`,
+    });
+  }
   return res.json({
     success: true,
     message: refundable > 0 ? "Refund processed" : "No refund eligible",
