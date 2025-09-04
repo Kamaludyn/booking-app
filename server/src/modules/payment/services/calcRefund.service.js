@@ -6,7 +6,6 @@ const calculateRefund = ({
   paidAmount, // total amount client has already paid
   serviceDelivered = false, // for disputes / service not delivered
 }) => {
-  console.log("canc");
   let refundable = 0;
   let reason = "";
   // If vendor cancels and service is not delivered

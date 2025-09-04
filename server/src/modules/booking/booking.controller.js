@@ -293,9 +293,44 @@ const updateBooking = asyncHandler(async (req, res) => {
     }
   });
 
+  // Check for reschedule: both or one of date or time gets updated
+  if (updatedFields.includes("date") || updatedFields.includes("time")) {
+    updates.status = "rescheduled";
+  }
+
   // Apply updates
   Object.assign(booking, updates);
   await booking.save();
+
+  // Send notification if date or time changed
+  if (updatedFields.includes("date") || updatedFields.includes("time")) {
+    const notificationMessage = `The booking has been ${
+      updates.status === "rescheduled" ? "rescheduled" : "updated"
+    } with new ${
+      updatedFields.includes("date") ? `date: ${updates.date}` : ""
+    } ${updatedFields.includes("time") ? `time: ${updates.time}` : ""}`.trim();
+
+    const targetUserId =
+      role === "client" ? booking.vendorId : booking.client?.id;
+
+    // only send notification if targetUserId exists (avoid null client.id case for guest bookings)
+    if (targetUserId) {
+      await sendNotification({
+        userId: targetUserId,
+        bookingId: booking._id,
+        type:
+          updates.status === "rescheduled"
+            ? "BOOKING_RESCHEDULED"
+            : "BOOKING_UPDATED",
+        channels: ["email", "inapp"],
+        subject:
+          updates.status === "rescheduled"
+            ? "Booking Rescheduled"
+            : "Booking Updated",
+        message: notificationMessage,
+      });
+    }
+  }
 
   res.status(200).json({
     message: "Booking updated successfully",
