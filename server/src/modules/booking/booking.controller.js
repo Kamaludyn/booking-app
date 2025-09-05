@@ -131,6 +131,16 @@ const createBooking = asyncHandler(async (req, res) => {
       availableSlots,
     });
   }
+  if (
+    !time.start ||
+    !time.end ||
+    !/^\d{2}:\d{2}$/.test(time.start) ||
+    !/^\d{2}:\d{2}$/.test(time.end)
+  ) {
+    return res.status(400).json({
+      message: "Invalid time format. Use { start: 'HH:mm', end: 'HH:mm' }",
+    });
+  }
 
   // Convert local date/time to UTC using timezone
   const startTime = toUtcDate(date, time.start, timezone);
@@ -255,10 +265,10 @@ const getBooking = asyncHandler(async (req, res) => {
   });
 });
 
-//  @desc    Update a booking
-//  @route   PATCH /api/v1/bookings/:bookingId
+//  @desc    Reschedule a booking (by updating only date or both time/date)
+//  @route   PATCH /api/v1/bookings/:bookingId/reschedule
 //  @access  Private
-const updateBooking = asyncHandler(async (req, res) => {
+const rescheduleBooking = asyncHandler(async (req, res) => {
   const { bookingId } = req.params;
   const { role, userId } = req.user;
 
@@ -276,15 +286,21 @@ const updateBooking = asyncHandler(async (req, res) => {
     return res.status(403).json({ message: "Not authorized as vendor" });
   }
 
-  // Role-based editable fields
-  let allowedFields = [];
-  if (role === "client") {
-    allowedFields = ["date", "time", "notes"];
-  } else if (role === "vendor") {
-    allowedFields = ["date", "time", "status", "notes"];
+  // Only allow date and/or time updates
+  let allowedFields = ["date", "time"];
+
+  // Validate request body keys
+  const invalidFields = Object.keys(req.body).filter(
+    (field) => !allowedFields.includes(field)
+  );
+
+  if (invalidFields.length > 0) {
+    return res.status(400).json({
+      message: `Invalid update field(s): ${invalidFields.join(", ")}`,
+    });
   }
 
-  // Filter updates
+  // Apply updates
   let updates = {};
 
   allowedFields.forEach((field) => {
@@ -293,43 +309,89 @@ const updateBooking = asyncHandler(async (req, res) => {
     }
   });
 
-  // Check for reschedule: both or one of date or time gets updated
-  if (updatedFields.includes("date") || updatedFields.includes("time")) {
-    updates.status = "rescheduled";
+  // Require at least one update
+  if (!updates.date && !updates.time) {
+    return res.status(400).json({ message: "Provide new date and/or time" });
   }
+
+  // Validate date if provided
+  if (updates.date) {
+    const dateObj = new Date(updates.date);
+    if (isNaN(dateObj.getTime())) {
+      return res.status(400).json({ message: "Invalid date format" });
+    }
+
+    const now = new Date();
+    if (dateObj < now) {
+      return res.status(400).json({ message: "Date must be in the future" });
+    }
+
+    console.log("DateObject:", dateObj);
+  }
+
+  // Validate and convert time if provided
+  if (updates.time) {
+    if (!updates.time.start) {
+      return res.status(400).json({ message: "Start time is empty" });
+    }
+    // Expecting { start: "HH:mm", end: "HH:mm" }
+    if (
+      !updates.time.start ||
+      !updates.time.end ||
+      !/^\d{2}:\d{2}$/.test(updates.time.start) ||
+      !/^\d{2}:\d{2}$/.test(updates.time.end)
+    ) {
+      return res.status(400).json({
+        message: "Invalid time format. Use { start: 'HH:mm', end: 'HH:mm' }",
+      });
+    }
+
+    // Ensure date is also provided
+    if (!updates.date) {
+      return res
+        .status(400)
+        .json({ message: "Updating time requires providing a date" });
+    }
+
+    const timezone = booking.timezone;
+
+    // Convert local date/time to UTC using your util
+    const startTime = toUtcDate(updates.date, updates.time.start, timezone);
+    const endTime = toUtcDate(updates.date, updates.time.end, timezone);
+    console.log("startTime:", startTime, "endTime:", endTime);
+
+    updates.time = {
+      start: startTime,
+      end: endTime,
+    };
+    console.log("updatedTime:", updates.time);
+  }
+
+  // Update booking status
+  updates.status = "rescheduled";
 
   // Apply updates
   Object.assign(booking, updates);
   await booking.save();
 
-  // Send notification if date or time changed
-  if (updatedFields.includes("date") || updatedFields.includes("time")) {
-    const notificationMessage = `The booking has been ${
-      updates.status === "rescheduled" ? "rescheduled" : "updated"
-    } with new ${
-      updatedFields.includes("date") ? `date: ${updates.date}` : ""
-    } ${updatedFields.includes("time") ? `time: ${updates.time}` : ""}`.trim();
+  // Send notification
+  const notificationMessage = `The booking has been rescheduled with new ${
+    updates.date ? `date: ${updates.date}` : ""
+  } ${updates.time ? `time: ${updates.time}` : ""}`.trim();
 
-    const targetUserId =
-      role === "client" ? booking.vendorId : booking.client?.id;
+  const targetUserId =
+    role === "client" ? booking.vendorId : booking.client?.id;
 
-    // only send notification if targetUserId exists (avoid null client.id case for guest bookings)
-    if (targetUserId) {
-      await sendNotification({
-        userId: targetUserId,
-        bookingId: booking._id,
-        type:
-          updates.status === "rescheduled"
-            ? "BOOKING_RESCHEDULED"
-            : "BOOKING_UPDATED",
-        channels: ["email", "inapp"],
-        subject:
-          updates.status === "rescheduled"
-            ? "Booking Rescheduled"
-            : "Booking Updated",
-        message: notificationMessage,
-      });
-    }
+  // only send notification if targetUserId exists (avoid null client.id case for guest bookings)
+  if (targetUserId) {
+    await sendNotification({
+      userId: targetUserId,
+      bookingId: booking._id,
+      type: "BOOKING_RESCHEDULED",
+      channels: ["email", "inapp"],
+      subject: "Booking Rescheduled",
+      message: notificationMessage,
+    });
   }
 
   res.status(200).json({
@@ -447,6 +509,6 @@ module.exports = {
   createBooking,
   getBookings,
   getBooking,
-  updateBooking,
+  rescheduleBooking,
   cancelBooking,
 };
