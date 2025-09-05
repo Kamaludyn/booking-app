@@ -377,7 +377,9 @@ const rescheduleBooking = asyncHandler(async (req, res) => {
   // Send notification
   const notificationMessage = `The booking has been rescheduled with new ${
     updates.date ? `date: ${updates.date}` : ""
-  } ${updates.time ? `time: ${updates.time}` : ""}`.trim();
+  } ${
+    updates.time ? `time: ${updates.time.start} to ${updates.end}` : ""
+  }`.trim();
 
   const targetUserId =
     role === "client" ? booking.vendorId : booking.client?.id;
@@ -505,10 +507,46 @@ const cancelBooking = asyncHandler(async (req, res) => {
   });
 });
 
+//  @desc    Mark booking as completed
+//  @route   PATCH /api/v1/bookings/:bookingId/completed
+//  @access  Vendor
+const markAsCompleted = asyncHandler(async (req, res) => {
+  const { bookingId } = req.params;
+  const { role, userId } = req.user;
+
+  // Only vendors can mark as completed
+  if (role !== "vendor") {
+    return res
+      .status(403)
+      .json({ message: "Only vendors can mark a booking as completed" });
+  }
+
+  // Find booking
+  const booking = await Booking.findById(bookingId);
+  if (!booking) {
+    return res.status(404).json({ message: "Booking not found" });
+  }
+
+  // Ensure vendor owns this booking
+  if (booking.vendorId.toString() !== userId) {
+    return res.status(403).json({ message: "Not authorized as vendor" });
+  }
+
+  // Update status
+  booking.status = "completed";
+  await booking.save();
+
+  res.status(200).json({
+    message: "Booking marked as completed",
+    booking,
+  });
+});
+
 module.exports = {
   createBooking,
   getBookings,
   getBooking,
   rescheduleBooking,
   cancelBooking,
+  markAsCompleted,
 };

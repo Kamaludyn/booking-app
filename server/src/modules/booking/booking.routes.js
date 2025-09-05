@@ -21,4 +21,10 @@ router.patch("/:bookingId/reschedule", bookingController.rescheduleBooking);
 // @route   PATCH /api/v1/booking/:bookingId/cancel
 router.patch("/:bookingId/cancel", bookingController.cancelBooking);
 
+// @route   PATCH /api/v1/booking/:bookingId/cancel
+router.patch("/:bookingId/cancel", bookingController.cancelBooking);
+
+// @route   PATCH /api/v1/booking/:bookingId/completed
+router.patch("/:bookingId/completed", bookingController.markAsCompleted);
+
 module.exports = router;
