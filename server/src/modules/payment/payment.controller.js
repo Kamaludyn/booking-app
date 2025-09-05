@@ -8,13 +8,14 @@ const {
   getRefunds,
   getBalance,
 } = require("./services/paymentReports.service.js");
+const sendNotification = require("../notifications/notifications.services.js");
 
 //  @desc    Process a payment
 //  @route   POST /api/v1/Payment
 //  @access  Private
 const processPayment = asyncHandler(async (req, res) => {
+  const { bookingId } = req.params;
   const {
-    bookingId,
     amountPaid,
     currency,
     method,
@@ -23,7 +24,6 @@ const processPayment = asyncHandler(async (req, res) => {
     idempotencyKey,
     meta,
   } = req.body;
-
   // Create the payment
   const { payment, booking } = await createPayment({
     bookingId,
@@ -32,6 +32,34 @@ const processPayment = asyncHandler(async (req, res) => {
     method,
     notes,
     idempotencyKey,
+  });
+
+  // Send notification to user
+  if (booking.client.id !== null) {
+    await sendNotification({
+      userId: booking.client?.id,
+      bookingId: booking._id,
+      type: "PAYMENT_RECEIVED",
+      channels: ["email", "inapp"],
+      subject: "Payment Confirmation",
+      message: `We’ve received your payment of ${amountPaid} ${currency} for your booking on ${
+        booking.date
+      } at ${booking.time.start.toLocaleTimeString()}. Thank you!`,
+    });
+  }
+
+  // Send notification to vendor
+  await sendNotification({
+    userId: booking.vendorId,
+    bookingId: booking._id,
+    type: "PAYMENT_RECEIVED",
+    channels: ["email", "inapp"],
+    subject: "Payment Confirmation",
+    message: `${
+      booking.client?.name || "A client"
+    } has paid ${amountPaid} ${currency} for their booking on ${
+      booking.date
+    } at ${booking.time.start.toLocaleTimeString()}.`,
   });
 
   res.status(201).json({
