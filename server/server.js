@@ -2,6 +2,7 @@ require("dotenv").config();
 const app = require("./src/app.js");
 const { connectDB } = require("./src/config/dbConnection.js");
 const startReminderScheduler = require("./src/modules/booking/reminderScheduler.job.js");
+const checkMissedBookings = require("./src/modules/booking/missedBookings.job.js");
 
 const PORT = process.env.PORT;
 
@@ -15,6 +16,7 @@ const PORT = process.env.PORT;
     if (process.env.NODE_ENV !== "development") {
       startReminderScheduler();
     }
+    checkMissedBookings();
 
     // If DB connection succeeds, start the server
     app.listen(PORT, () => {
