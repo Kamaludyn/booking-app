@@ -1,7 +1,5 @@
 const { DateTime } = require("luxon");
 const Booking = require("./booking.model.js");
-const sendReminderEmail = require("../../lib/sendReminderEmail.js");
-const sendVendorPromptEmail = require("../../lib/sendVendorPromptEmail.js");
 const Vendor = require("../auth/auth.model.js");
 
 const REMINDER_INTERVAL_MINUTES = 10;
@@ -46,11 +44,17 @@ const startReminderScheduler = () => {
 
         // Send reminders and mark this stage as completed
         for (const booking of bookings) {
-          await sendReminderEmail(
-            booking.client.email,
-            booking,
-            stage.hoursBefore
-          );
+          // in-app/email notification
+          if (booking.client.id) {
+            await sendNotification({
+              userId: booking.client.id,
+              bookingId: booking._id,
+              type: "BOOKING_REMINDER",
+              channels: ["email", "inapp"],
+              subject: `Upcoming Appointment in ${stage.hoursBefore}h`,
+              message: `Reminder: You have an appointment scheduled on ${booking.date} at ${booking.time.start}.`,
+            });
+          }
           booking.reminderStages[stage.flag] = true;
           await booking.save();
         }
@@ -72,7 +76,20 @@ const startReminderScheduler = () => {
           continue;
         }
 
-        await sendVendorPromptEmail(vendor.email, booking);
+        // in-app/email notification
+        await sendNotification({
+          userId: vendor._id,
+          bookingId: booking._id,
+          type: "VENDOR_PROMPT",
+          channels: ["email", "inapp"],
+          subject: "Pending Appointment Update",
+          message: `The appointment with ${
+            booking.client.name || "a client"
+          } on ${booking.date} at ${
+            booking.time.start
+          } has passed. Please update its status.`,
+        });
+
         booking.vendorPromptSent = true;
         await booking.save();
       }
