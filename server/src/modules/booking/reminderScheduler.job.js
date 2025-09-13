@@ -22,7 +22,6 @@ const STAGES = [
 const startReminderScheduler = () => {
   setInterval(async () => {
     const now = DateTime.now();
-    console.log("Date.now():", now);
 
     try {
       // Loop through each reminder stage (e.g., 24h, 3h, 1h before appointment)
@@ -71,10 +70,6 @@ const startReminderScheduler = () => {
       // Send vendor prompts and mark as sent
       for (const booking of past) {
         const vendor = await Vendor.findById(booking.vendorId);
-        if (!vendor || !vendor.email) {
-          console.warn("Vendor email not found for booking:", booking._id);
-          continue;
-        }
 
         // in-app/email notification
         await sendNotification({

@@ -15,8 +15,8 @@ const PORT = process.env.PORT;
     // Start background scheduler
     if (process.env.NODE_ENV !== "development") {
       startReminderScheduler();
+      checkMissedBookings();
     }
-    checkMissedBookings();
 
     // If DB connection succeeds, start the server
     app.listen(PORT, () => {

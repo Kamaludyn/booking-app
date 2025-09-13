@@ -45,7 +45,7 @@ const checkMissedBookings = async () => {
   }
 };
 
-// run every 1 minute
-setInterval(checkMissedBookings, 1 * 60 * 1000);
+// run every 10 minute
+setInterval(checkMissedBookings, 10 * 60 * 1000);
 
 module.exports = checkMissedBookings;
