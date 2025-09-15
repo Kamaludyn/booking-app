@@ -4,6 +4,7 @@ const morgan = require("morgan");
 const cors = require("cors");
 const dotenv = require("dotenv");
 const registerRoutes = require("./config/registerRoutes.js");
+const stripeWebhookRoutes = require("./modules/payment/stripe/stripe.routes");
 const errorHandler = require("./middleware/errorHandler.js");
 const { globalLimiter } = require("./middleware/rateLimiter");
 
@@ -18,6 +19,12 @@ app.use(globalLimiter);
 
 app.use(compression());
 app.use(cors());
+app.use(
+  "/api/v1/payment/stripe/webhook",
+  express.raw({ type: "application/json" }),
+  stripeWebhookRoutes
+);
+
 app.use(express.json());
 app.use(express.urlencoded({ extended: false }));
 
