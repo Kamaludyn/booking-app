@@ -22,11 +22,14 @@ const PaymentSchema = new mongoose.Schema(
       required: true,
       index: true,
     },
-
-    amountPaid: {
+    amountExpected: {
       type: Number,
       required: true,
       validate: (v) => Number.isFinite(v) && v > 0,
+    },
+    amountPaid: {
+      type: Number,
+      required: true,
     },
 
     currency: {
@@ -53,8 +56,16 @@ const PaymentSchema = new mongoose.Schema(
       index: true,
     },
 
-    transactionId: { type: String, default: null },
-    notes: { type: String, default: "" },
+    providerSessionId: { type: String },
+    providerPaymentIntentId: { type: String },
+    reservationId: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: "Reservation",
+    },
+    notes: {
+      type: String,
+      default: "",
+    },
 
     // Prevent duplicate charges on retries
     idempotencyKey: {
