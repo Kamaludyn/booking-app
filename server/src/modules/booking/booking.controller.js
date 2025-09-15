@@ -1,12 +1,15 @@
 const Booking = require("./booking.model");
 const Service = require("../services/services.model");
 const Payment = require("../payment/payment.model");
+const Reservation = require("../reservation/reservation.model");
 const asyncHandler = require("express-async-handler");
 const generateBookableSlots = require("./generateBookableSlots.service");
 const toUtcDate = require("../../utils/convertTime");
 const createPayment = require("../payment/services/createPayment.service");
 const calculateRefund = require("../payment/services/calcRefund.service");
 const sendNotification = require("../notifications/notifications.services");
+
+const RESERVATION_TTL_MINUTES = process.env.RESERVATION_TTL_MINUTES || 15;
 
 //  @desc    Creates a new booking
 //  @route   POST /api/v1/bookings
@@ -30,6 +33,17 @@ const createBooking = asyncHandler(async (req, res) => {
     return res.status(400).json({ message: "Missing required fields." });
   }
 
+  if (
+    !time.start ||
+    !time.end ||
+    !/^\d{2}:\d{2}$/.test(time.start) ||
+    !/^\d{2}:\d{2}$/.test(time.end)
+  ) {
+    return res.status(400).json({
+      message: "Invalid time format. Use { start: 'HH:mm', end: 'HH:mm' }",
+    });
+  }
+
   // Validate client contact fields based on who initiated the booking
   if (createdBy === "client") {
     if (!client.email || !client.phone) {
@@ -50,39 +64,6 @@ const createBooking = asyncHandler(async (req, res) => {
   const service = await Service.findById(serviceId);
   if (!service) {
     return res.status(404).json({ message: "Service not found." });
-  }
-
-  // If deposit is required, delegate to payment service (pre-booking flow)
-  if (service.requireDeposit) {
-    if (!payment) {
-      return res.status(400).json({
-        message: "Payment details are required for this service.",
-      });
-    }
-    const { payment: payDoc, booking } = await createPayment({
-      serviceId,
-      amount: payment.amount,
-      method: payment.method,
-      provider: payment.provider,
-      idempotencyKey: payment.idempotencyKey,
-      meta: payment.meta,
-      bookingPayload: {
-        client,
-        date,
-        time,
-        timezone,
-        notes,
-        recurrence,
-        createdBy,
-      },
-    });
-
-    return res.status(201).json({
-      success: true,
-      message: "Booking created with payment",
-      booking,
-      payment: payDoc,
-    });
   }
 
   // Validate recurrence if provided
@@ -131,14 +112,49 @@ const createBooking = asyncHandler(async (req, res) => {
       availableSlots,
     });
   }
-  if (
-    !time.start ||
-    !time.end ||
-    !/^\d{2}:\d{2}$/.test(time.start) ||
-    !/^\d{2}:\d{2}$/.test(time.end)
-  ) {
-    return res.status(400).json({
-      message: "Invalid time format. Use { start: 'HH:mm', end: 'HH:mm' }",
+
+  // If deposit is required, delegate to payment service (pre-booking flow)
+  if (service.requireDeposit) {
+    if (!payment) {
+      return res.status(400).json({
+        message: "Payment details are required for this service.",
+      });
+    }
+
+    // create reservation
+    const reservation = await Reservation.create({
+      vendorId: service.vendorId,
+      serviceId,
+      date,
+      timeStart: time.start,
+      timeEnd: time.end,
+      timezone,
+      bookingPayload: {
+        client,
+        date,
+        time,
+        timezone,
+        notes,
+        recurrence,
+        createdBy,
+      },
+      expiresAt: new Date(Date.now() + RESERVATION_TTL_MINUTES * 60000),
+    });
+
+    const { payment: payDoc, sessionUrl } = await createPayment({
+      reservationId: reservation._id,
+      serviceId,
+      amount: payment.amount,
+      method: payment.method,
+      provider: payment.provider,
+      notes: payment.notes,
+    });
+
+    return res.status(201).json({
+      success: true,
+      message: "Reservation created, awaiting deposit payment",
+      payment: payDoc,
+      checkoutUrl: sessionUrl,
     });
   }
 

@@ -15,23 +15,15 @@ const sendNotification = require("../notifications/notifications.services.js");
 //  @access  Private
 const processPayment = asyncHandler(async (req, res) => {
   const { bookingId } = req.params;
-  const {
-    amountPaid,
-    currency,
-    method,
-    provider,
-    notes,
-    idempotencyKey,
-    meta,
-  } = req.body;
+  const { amountPaid, currency, method, provider, notes } = req.body;
   // Create the payment
   const { payment, booking } = await createPayment({
     bookingId,
     amount: amountPaid,
     currency,
     method,
+    provider,
     notes,
-    idempotencyKey,
   });
 
   // Send notification to user
