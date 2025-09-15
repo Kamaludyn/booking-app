@@ -1,20 +1,18 @@
 const mongoose = require("mongoose");
+const stripe = require("stripe")(process.env.STRIPE_SECRET_KEY);
 const Payment = require("../payment.model.js");
 const Booking = require("../../booking/booking.model.js");
 const Service = require("../../services/services.model.js");
-const generateBookableSlots = require("../../booking/generateBookableSlots.service.js");
-const toUtcDate = require("../../../utils/convertTime.js");
-const processMockPayment = require("../../../lib/mockPaymentGateway.js");
 
 const createPayment = async ({
+  reservationId,
   bookingId,
   serviceId,
   amount,
   method,
-  provider = "stripe",
+  provider,
   idempotencyKey = null,
   meta = null,
-  bookingPayload, // only for pre-booking flow
 }) => {
   // Validate amount
   if (!amount || !Number.isFinite(amount) || amount <= 0) {
@@ -28,6 +26,29 @@ const createPayment = async ({
     const error = new Error("Invalid payment method");
     error.statusCode = 400;
     throw error;
+  }
+
+  // Idempotency: if a payment with same idempotencyKey exists, return it
+  if (idempotencyKey) {
+    const existing = await Payment.findOne({
+      idempotencyKey,
+      provider: "stripe",
+    });
+    if (existing) {
+      // If existing has providerSessionId and is pending, return it so client re-uses same URL
+      if (existing.providerSessionId && existing.status === "pending") {
+        return {
+          sessionId: existing.providerSessionId,
+          sessionUrl: existing.meta?.sessionUrl,
+          payment: existing,
+        };
+      }
+      // Otherwise return existing payment
+      return {
+        payment: existing,
+        booking: bookingId ? await Booking.findById(bookingId) : null,
+      };
+    }
   }
 
   // POST-BOOKING FLOW (Service Booking doesn't require Deposit)
@@ -68,65 +89,60 @@ const createPayment = async ({
       throw error;
     }
 
-    // Process gateway payment
-    const gateway = await processMockPayment({
-      amount,
-      currency: service.currency,
+    // create pending payment record (will be finalized in webhook)
+    const paymentDoc = await Payment.create({
+      bookingId,
+      serviceId: service._id,
+      vendorId,
+      amountExpected: amount,
+      amountPaid: 0,
+      currency: service.currency || process.env.CURRENCY,
+      method,
+      provider,
+      status: "pending",
+      idempotencyKey,
+      meta,
     });
-    if (!gateway.success) {
-      return {
-        success: false,
-        message: "Payment failed at gateway",
-        gateway,
-      };
-    }
 
-    // Record the Payment + update Booking.
-    const session = await mongoose.startSession();
-    session.startTransaction();
-    try {
-      const payment = await Payment.create(
-        [
-          {
-            bookingId,
-            serviceId: service._id,
-            vendorId,
-            amountPaid: amount,
-            currency: service.currency,
-            method,
-            provider,
-            status: "paid",
-            idempotencyKey,
-            meta,
+    const session = await stripe.checkout.sessions.create({
+      payment_method_types: ["card"],
+      mode: "payment",
+      customer_email: booking.client.email || undefined,
+      line_items: [
+        {
+          price_data: {
+            currency: (
+              process.env.CURRENCY ||
+              service.currency ||
+              "usd"
+            ).toLowerCase(),
+            product_data: {
+              name: `${service.name} - Booking #${bookingId}`,
+            },
+            unit_amount: amount * 100,
           },
-        ],
-        { session }
-      );
+          quantity: 1,
+        },
+      ],
+      success_url: `${process.env.CLIENT_URL}/booking/${bookingId}?payment=success&session_id={CHECKOUT_SESSION_ID}`,
+      cancel_url: `${process.env.CLIENT_URL}/booking/${bookingId}?payment=cancel`,
+      metadata: {
+        paymentId: String(paymentDoc._id),
+        bookingId: String(bookingId),
+        vendorId: String(vendorId),
+      },
+    });
+    // persist session info on payment
+    paymentDoc.providerSessionId = session.id;
+    paymentDoc.meta = { ...paymentDoc.meta, sessionUrl: session.url };
+    await paymentDoc.save();
 
-      const newTotalPaid = totalPaid + amount;
-      const balanceAmount = Math.max(servicePrice - newTotalPaid, 0);
-
-      // Update payment status based on new total paid
-      const newPaymentStatus =
-        newTotalPaid === 0
-          ? "unpaid"
-          : balanceAmount === 0
-          ? "paid"
-          : "partial";
-
-      booking.payment = { status: newPaymentStatus, balanceAmount };
-      booking.paidAmount = newTotalPaid;
-      await booking.save({ session });
-
-      await session.commitTransaction();
-      session.endSession();
-
-      return { payment: payment[0], booking };
-    } catch (error) {
-      await session.abortTransaction();
-      session.endSession();
-      throw error;
-    }
+    return {
+      sessionId: session.id,
+      sessionUrl: session.url,
+      payment: paymentDoc,
+      booking,
+    };
   }
 
   // PRE-BOOKING (DEPOSIT-FIRST) FLOW
@@ -172,102 +188,61 @@ const createPayment = async ({
     throw error;
   }
 
-  // Validate slot availability before charging
-  const vendorId = service.vendorId;
-  const slotDuration = (service.duration || 0) + (service.bufferTime || 0);
-  const { date, time, timezone, client, notes, recurrence, createdBy } =
-    bookingPayload;
-
-  const availableSlots = await generateBookableSlots(
-    date,
-    slotDuration,
-    vendorId
-  );
-  console.log("availableSlots:", availableSlots);
-  const formattedSlot = `${time.start}`.padStart(5, "0");
-  console.log("timeStart:", time.start);
-  if (!availableSlots.includes(formattedSlot)) {
-    const error = new Error(
-      `Selected time slot (${formattedSlot}) is no longer available. Available slots are: ${availableSlots.join(
-        ", "
-      )}`
-    );
-    error.statusCode = 400;
-    throw error;
-  }
-
-  // Process gateway payment
-  const gateway = await processMockPayment({
-    amount,
-    currency: service.currency,
+  // Create pending payment record tied to the reservation
+  const paymentDoc = await Payment.create({
+    reservationId,
+    serviceId: service._id,
+    vendorId,
+    amountExpected: amount,
+    amountPaid: 0,
+    currency: service.currency || process.env.CURRENCY,
+    method,
+    provider: "stripe",
+    status: "pending",
+    idempotencyKey,
+    meta,
   });
-  if (!gateway.success) {
-    return {
-      success: false,
-      message: "Payment failed at gateway",
-      gateway,
-    };
-  }
 
-  // Create Booking + Payment atomically (so we never block a slot unless payment succeeded)
-  const session = await mongoose.startSession();
-  session.startTransaction();
-
-  try {
-    const startTime = toUtcDate(date, time.start, timezone);
-    const endTime = toUtcDate(date, time.end, timezone);
-
-    // Compute summary for the new booking
-    const balanceAmount = Math.max(servicePrice - amount, 0);
-    const paymentStatus = balanceAmount === 0 ? "paid" : "partial";
-
-    const [booking] = await Booking.create(
-      [
-        {
-          vendorId,
-          serviceId,
-          client,
-          date,
-          time: { start: startTime, end: endTime },
-          timezone,
-          notes,
-          createdBy,
-          status: "upcoming",
-          payment: { status: paymentStatus, paidAmount: amount, balanceAmount },
-          currency: service.currency,
-          recurrence: recurrence || { repeat: "none" },
+  // Create Stripe Checkout session, attach reservation/payment ids in metadata
+  const session = await stripe.checkout.sessions.create({
+    payment_method_types: ["card"],
+    mode: "payment",
+    customer_email: bookingPayload.client?.email || undefined,
+    line_items: [
+      {
+        price_data: {
+          currency: (
+            service.currency ||
+            process.env.CURRENCY ||
+            "usd"
+          ).toLowerCase(),
+          product_data: {
+            name: `${service.name} — Deposit`,
+          },
+          unit_amount: toStripeCents(amount),
         },
-      ],
-      { session }
-    );
+        quantity: 1,
+      },
+    ],
+    success_url: `${process.env.APP_URL}/booking/confirm?payment=success&session_id={CHECKOUT_SESSION_ID}`,
+    cancel_url: `${process.env.APP_URL}/booking/confirm?payment=cancel`,
+    metadata: {
+      paymentId: String(paymentDoc._id),
+      reservationId: String(reservation._id),
+      serviceId: String(serviceId),
+      vendorId: String(vendorId),
+    },
+  });
+  // persist session info on payment
+  paymentDoc.providerSessionId = session.id;
+  paymentDoc.meta = { ...paymentDoc.meta, sessionUrl: session.url };
+  await paymentDoc.save();
 
-    const [payment] = await Payment.create(
-      [
-        {
-          bookingId: booking._id,
-          serviceId: service._id,
-          vendorId,
-          amountPaid: amount,
-          currency: service.currency,
-          method,
-          provider,
-          status: "paid",
-          idempotencyKey,
-          meta,
-        },
-      ],
-      { session }
-    );
-
-    await session.commitTransaction();
-    session.endSession();
-
-    return { payment, booking };
-  } catch (error) {
-    await session.abortTransaction();
-    session.endSession();
-    throw error;
-  }
+  return {
+    sessionId: session.id,
+    sessionUrl: session.url,
+    payment: paymentDoc,
+  };
 };
 
 module.exports = createPayment;
