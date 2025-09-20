@@ -20,7 +20,9 @@ const notificationSchema = new mongoose.Schema(
         "BOOKING_REMINDER",
         "VENDOR_PROMPT",
         "PAYMENT_RECEIVED",
+        "PAYMENT_FAILED",
         "PAYMENT_REFUNDED",
+        "MISSING_RESERVATION",
       ],
       required: true,
     },
@@ -31,6 +33,7 @@ const notificationSchema = new mongoose.Schema(
     },
     subject: String,
     message: String,
+    link: { type: String },
 
     sent: { type: Boolean, default: false },
     sentAt: Date,
