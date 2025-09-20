@@ -4,10 +4,38 @@ const Payment = require("../payment.model.js");
 const Booking = require("../../booking/booking.model.js");
 const Service = require("../../services/services.model.js");
 
+const zeroDecimalCurrencies = [
+  "bif",
+  "clp",
+  "djf",
+  "gnf",
+  "jpy",
+  "kmf",
+  "krw",
+  "mga",
+  "pyg",
+  "rwf",
+  "ugx",
+  "vnd",
+  "vuv",
+  "xaf",
+  "xof",
+  "xpf",
+];
+
+const unitAmount = (currency, amount) => {
+  return zeroDecimalCurrencies.includes(currency)
+    ? Math.round(amount) // no *100
+    : Math.round(amount * 100); // scale to cents/kobo
+};
+
 const createPayment = async ({
   reservationId,
   bookingId,
   serviceId,
+  clientName,
+  clientEmail,
+  clientPhone,
   amount,
   method,
   provider,
@@ -104,6 +132,12 @@ const createPayment = async ({
       meta,
     });
 
+    const currency = (
+      process.env.CURRENCY ||
+      service.currency ||
+      "usd"
+    ).toLowerCase();
+
     const session = await stripe.checkout.sessions.create({
       payment_method_types: ["card"],
       mode: "payment",
@@ -111,15 +145,11 @@ const createPayment = async ({
       line_items: [
         {
           price_data: {
-            currency: (
-              process.env.CURRENCY ||
-              service.currency ||
-              "usd"
-            ).toLowerCase(),
+            currency,
             product_data: {
               name: `${service.name} - Booking #${bookingId}`,
             },
-            unit_amount: amount * 100,
+            unit_amount: unitAmount(currency, amount),
           },
           quantity: 1,
         },
@@ -146,10 +176,8 @@ const createPayment = async ({
   }
 
   // PRE-BOOKING (DEPOSIT-FIRST) FLOW
-  if (!serviceId || !bookingPayload) {
-    const error = new Error(
-      "serviceId and bookingPayload are required for pre-booking deposits"
-    );
+  if (!serviceId) {
+    const error = new Error("serviceId is required for pre-booking deposits");
     error.statusCode = 400;
     throw error;
   }
@@ -191,8 +219,8 @@ const createPayment = async ({
   // Create pending payment record tied to the reservation
   const paymentDoc = await Payment.create({
     reservationId,
-    serviceId: service._id,
-    vendorId,
+    serviceId,
+    vendorId: service.vendorId,
     amountExpected: amount,
     amountPaid: 0,
     currency: service.currency || process.env.CURRENCY,
@@ -201,36 +229,43 @@ const createPayment = async ({
     status: "pending",
     idempotencyKey,
     meta,
+    clientSnapshot: {
+      name: clientName,
+      email: clientEmail,
+      phone: clientPhone,
+    },
   });
+
+  const currency = (
+    process.env.CURRENCY ||
+    service.currency ||
+    "usd"
+  ).toLowerCase();
 
   // Create Stripe Checkout session, attach reservation/payment ids in metadata
   const session = await stripe.checkout.sessions.create({
     payment_method_types: ["card"],
     mode: "payment",
-    customer_email: bookingPayload.client?.email || undefined,
+    customer_email: clientEmail || undefined,
     line_items: [
       {
         price_data: {
-          currency: (
-            service.currency ||
-            process.env.CURRENCY ||
-            "usd"
-          ).toLowerCase(),
+          currency,
           product_data: {
             name: `${service.name} — Deposit`,
           },
-          unit_amount: toStripeCents(amount),
+          unit_amount: unitAmount(currency, amount),
         },
         quantity: 1,
       },
     ],
-    success_url: `${process.env.APP_URL}/booking/confirm?payment=success&session_id={CHECKOUT_SESSION_ID}`,
-    cancel_url: `${process.env.APP_URL}/booking/confirm?payment=cancel`,
+    success_url: `${process.env.CLIENT_URL}/booking/confirm?payment=success&session_id={CHECKOUT_SESSION_ID}`,
+    cancel_url: `${process.env.CLIENT_URL}/booking/confirm?payment=cancel`,
     metadata: {
       paymentId: String(paymentDoc._id),
-      reservationId: String(reservation._id),
+      reservationId: String(reservationId),
       serviceId: String(serviceId),
-      vendorId: String(vendorId),
+      vendorId: String(service.vendorId),
     },
   });
   // persist session info on payment

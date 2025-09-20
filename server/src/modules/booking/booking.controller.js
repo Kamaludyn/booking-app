@@ -26,7 +26,7 @@ const createBooking = asyncHandler(async (req, res) => {
     notes,
     recurrence,
     createdBy,
-    payment,
+    payments,
   } = req.body;
 
   if (!serviceId || !client || !date || !time || !timezone || !createdBy) {
@@ -115,7 +115,7 @@ const createBooking = asyncHandler(async (req, res) => {
 
   // If deposit is required, delegate to payment service (pre-booking flow)
   if (service.requireDeposit) {
-    if (!payment) {
+    if (!payments) {
       return res.status(400).json({
         message: "Payment details are required for this service.",
       });
@@ -123,7 +123,7 @@ const createBooking = asyncHandler(async (req, res) => {
 
     // create reservation
     const reservation = await Reservation.create({
-      vendorId: service.vendorId,
+      vendorId,
       serviceId,
       date,
       timeStart: time.start,
@@ -144,10 +144,14 @@ const createBooking = asyncHandler(async (req, res) => {
     const { payment: payDoc, sessionUrl } = await createPayment({
       reservationId: reservation._id,
       serviceId,
-      amount: payment.amount,
-      method: payment.method,
-      provider: payment.provider,
-      notes: payment.notes,
+      vendorId,
+      clientName: client.name,
+      clientEmail: client.email,
+      clientPhone: client.phone,
+      amount: payments.amount,
+      method: payments.method,
+      provider: payments.provider,
+      notes: payments.notes,
     });
 
     return res.status(201).json({
@@ -341,8 +345,6 @@ const rescheduleBooking = asyncHandler(async (req, res) => {
     if (dateObj < now) {
       return res.status(400).json({ message: "Date must be in the future" });
     }
-
-    console.log("DateObject:", dateObj);
   }
 
   // Validate and convert time if provided

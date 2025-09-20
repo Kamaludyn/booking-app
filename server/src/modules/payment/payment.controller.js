@@ -337,7 +337,7 @@ const addOfflinePayment = asyncHandler(async (req, res) => {
   });
 
   // Recalculate booking payment and status
-  await recalcBookingPayment(booking);
+  await recalcBookingPayment(booking._id);
 
   res.status(201).json({ success: true, payment, booking });
 });

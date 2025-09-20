@@ -1,13 +1,16 @@
 const Payment = require("../payment.model");
+const Booking = require("../../booking/booking.model");
 
-const recalcBookingPayment = async (booking) => {
+const recalcBookingPayment = async (bookingId) => {
   // Get all existing(paid/refund) payments for the booking
   const existingPayments = await Payment.find({
-    bookingId: booking._id,
+    bookingId,
     status: { $in: ["paid", "refunded"] },
   })
     .select("amountPaid status")
     .populate("serviceId", "price");
+
+  const booking = await Booking.findById(bookingId).select("payment");
 
   const payments = existingPayments || [];
 
@@ -22,7 +25,7 @@ const recalcBookingPayment = async (booking) => {
 
   const servicePrice = payments[0].serviceId.price;
   const netPaid = paid - refunded;
-  const balance = servicePrice - netPaid;
+  const balance = Math.max(servicePrice - netPaid, 0);
 
   // update booking.payment fields
   booking.payment.paidAmount = netPaid;
