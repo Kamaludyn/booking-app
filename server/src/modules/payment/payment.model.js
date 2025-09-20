@@ -5,7 +5,6 @@ const PaymentSchema = new mongoose.Schema(
     bookingId: {
       type: mongoose.Schema.Types.ObjectId,
       ref: "Booking",
-      required: true,
       index: true,
     },
 
@@ -21,6 +20,10 @@ const PaymentSchema = new mongoose.Schema(
       ref: "User",
       required: true,
       index: true,
+    },
+    reservationId: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: "Reservation",
     },
     amountExpected: {
       type: Number,
@@ -58,9 +61,10 @@ const PaymentSchema = new mongoose.Schema(
 
     providerSessionId: { type: String },
     providerPaymentIntentId: { type: String },
-    reservationId: {
-      type: mongoose.Schema.Types.ObjectId,
-      ref: "Reservation",
+    ClientSnapshot: {
+      name: { type: String },
+      email: { type: String },
+      phone: { type: String },
     },
     notes: {
       type: String,
