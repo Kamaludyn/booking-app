@@ -30,7 +30,10 @@ const createBooking = asyncHandler(async (req, res) => {
   } = req.body;
 
   if (!serviceId || !client || !date || !time || !timezone || !createdBy) {
-    return res.status(400).json({ message: "Missing required fields." });
+    return res.status(400).json({
+      success: false,
+      message: "Missing required fields.",
+    });
   }
 
   if (
@@ -40,6 +43,7 @@ const createBooking = asyncHandler(async (req, res) => {
     !/^\d{2}:\d{2}$/.test(time.end)
   ) {
     return res.status(400).json({
+      success: false,
       message: "Invalid time format. Use { start: 'HH:mm', end: 'HH:mm' }",
     });
   }
@@ -48,12 +52,14 @@ const createBooking = asyncHandler(async (req, res) => {
   if (createdBy === "client") {
     if (!client.email || !client.phone) {
       return res.status(400).json({
+        success: false,
         message: "Email and phone number are required.",
       });
     }
   } else if (createdBy === "vendor") {
     if (!client.email && !client.phone) {
       return res.status(400).json({
+        success: false,
         message:
           "At least client email or phone is required when creating appointment.",
       });
@@ -63,7 +69,10 @@ const createBooking = asyncHandler(async (req, res) => {
   // Fetch service
   const service = await Service.findById(serviceId);
   if (!service) {
-    return res.status(404).json({ message: "Service not found." });
+    return res.status(404).json({
+      success: false,
+      message: "Service not found.",
+    });
   }
 
   // Validate recurrence if provided
@@ -73,11 +82,15 @@ const createBooking = asyncHandler(async (req, res) => {
     );
 
     if (!isValidRepeat) {
-      return res.status(400).json({ message: "Invalid recurrence pattern" });
+      return res.status(400).json({
+        success: false,
+        message: "Invalid recurrence pattern",
+      });
     }
 
     if (!recurrence.interval || !recurrence.endDate) {
       return res.status(400).json({
+        success: false,
         message: "Recurring bookings must include interval and end date",
       });
     }
@@ -99,6 +112,7 @@ const createBooking = asyncHandler(async (req, res) => {
   // Validate available slots
   if (!availableSlots) {
     return res.status(500).json({
+      success: false,
       message: "Error generating available time slots.",
     });
   }
@@ -108,6 +122,7 @@ const createBooking = asyncHandler(async (req, res) => {
 
   if (!availableSlots.includes(formattedSlot)) {
     return res.status(400).json({
+      success: false,
       message: `Selected time slot (${formattedSlot}) is no longer available.`,
       availableSlots,
     });
@@ -117,6 +132,7 @@ const createBooking = asyncHandler(async (req, res) => {
   if (service.requireDeposit) {
     if (!payments) {
       return res.status(400).json({
+        success: false,
         message: "Payment details are required for this service.",
       });
     }
@@ -213,6 +229,7 @@ const createBooking = asyncHandler(async (req, res) => {
   });
 
   res.status(201).json({
+    success: true,
     message: "Booking created successfully",
     booking,
   });
@@ -252,6 +269,7 @@ const getBookings = asyncHandler(async (req, res) => {
   const total = await Booking.countDocuments(query);
 
   res.status(200).json({
+    success: true,
     message: "Bookings fetched successfully",
     bookings,
     total,
@@ -276,10 +294,14 @@ const getBooking = asyncHandler(async (req, res) => {
 
   // If booking not found, return error
   if (!booking) {
-    return res.status(404).json({ message: "Booking not found" });
+    return res.status(404).json({
+      success: false,
+      message: "Booking not found",
+    });
   }
 
   res.status(200).json({
+    success: true,
     message: "Booking fetched successfully",
     booking,
   });
@@ -295,15 +317,24 @@ const rescheduleBooking = asyncHandler(async (req, res) => {
   // Find booking
   const booking = await Booking.findById(bookingId);
   if (!booking) {
-    return res.status(404).json({ message: "Booking not found" });
+    return res.status(404).json({
+      success: false,
+      message: "Booking not found",
+    });
   }
 
   // Users can only update their own booking
   if (role === "client" && booking.client.id.toString() !== userId) {
-    return res.status(403).json({ message: "Not authorized as client" });
+    return res.status(403).json({
+      success: false,
+      message: "Not authorized as client",
+    });
   }
   if (role === "vendor" && booking.vendorId.toString() !== userId) {
-    return res.status(403).json({ message: "Not authorized as vendor" });
+    return res.status(403).json({
+      success: false,
+      message: "Not authorized as vendor",
+    });
   }
 
   // Only allow date and/or time updates
@@ -316,6 +347,7 @@ const rescheduleBooking = asyncHandler(async (req, res) => {
 
   if (invalidFields.length > 0) {
     return res.status(400).json({
+      success: false,
       message: `Invalid update field(s): ${invalidFields.join(", ")}`,
     });
   }
@@ -331,26 +363,38 @@ const rescheduleBooking = asyncHandler(async (req, res) => {
 
   // Require at least one update
   if (!updates.date && !updates.time) {
-    return res.status(400).json({ message: "Provide new date and/or time" });
+    return res.status(400).json({
+      success: false,
+      message: "Provide new date and/or time",
+    });
   }
 
   // Validate date if provided
   if (updates.date) {
     const dateObj = new Date(updates.date);
     if (isNaN(dateObj.getTime())) {
-      return res.status(400).json({ message: "Invalid date format" });
+      return res.status(400).json({
+        success: false,
+        message: "Invalid date format",
+      });
     }
 
     const now = new Date();
     if (dateObj < now) {
-      return res.status(400).json({ message: "Date must be in the future" });
+      return res.status(400).json({
+        success: false,
+        message: "Date must be in the future",
+      });
     }
   }
 
   // Validate and convert time if provided
   if (updates.time) {
     if (!updates.time.start) {
-      return res.status(400).json({ message: "Start time is empty" });
+      return res.status(400).json({
+        success: false,
+        message: "Start time is empty",
+      });
     }
     // Expecting { start: "HH:mm", end: "HH:mm" }
     if (
@@ -360,15 +404,17 @@ const rescheduleBooking = asyncHandler(async (req, res) => {
       !/^\d{2}:\d{2}$/.test(updates.time.end)
     ) {
       return res.status(400).json({
+        success: false,
         message: "Invalid time format. Use { start: 'HH:mm', end: 'HH:mm' }",
       });
     }
 
     // Ensure date is also provided
     if (!updates.date) {
-      return res
-        .status(400)
-        .json({ message: "Updating time requires providing a date" });
+      return res.status(400).json({
+        success: false,
+        message: "Updating time requires providing a date",
+      });
     }
 
     const timezone = booking.timezone;
@@ -376,13 +422,11 @@ const rescheduleBooking = asyncHandler(async (req, res) => {
     // Convert local date/time to UTC using your util
     const startTime = toUtcDate(updates.date, updates.time.start, timezone);
     const endTime = toUtcDate(updates.date, updates.time.end, timezone);
-    console.log("startTime:", startTime, "endTime:", endTime);
 
     updates.time = {
       start: startTime,
       end: endTime,
     };
-    console.log("updatedTime:", updates.time);
   }
 
   // Update booking status
@@ -415,6 +459,7 @@ const rescheduleBooking = asyncHandler(async (req, res) => {
   }
 
   res.status(200).json({
+    success: true,
     message: "Booking updated successfully",
     booking,
   });
@@ -428,7 +473,10 @@ const cancelBooking = asyncHandler(async (req, res) => {
   const { cancelledBy } = req.body;
 
   if (!["client", "vendor"].includes(cancelledBy)) {
-    return res.status(400).json({ message: "Unauthorized" });
+    return res.status(400).json({
+      success: false,
+      message: "Unauthorized",
+    });
   }
 
   const booking = await Booking.findById(bookingId).populate("serviceId");
@@ -512,16 +560,14 @@ const cancelBooking = asyncHandler(async (req, res) => {
       message: `A booking for ${booking.serviceId.name} has been cancelled.`,
     });
   }
-  return res.json({
+  return res.status(200).json({
     success: true,
     message: refundable > 0 ? "Refund processed" : "No refund eligible",
-    data: {
-      bookingId: booking._id,
-      newStatus: booking.status,
-      refundable,
-      reason,
-      refundPayment,
-    },
+    bookingId: booking._id,
+    newStatus: booking.status,
+    refundable,
+    reason,
+    refundPayment,
   });
 });
 
@@ -534,20 +580,27 @@ const markAsCompleted = asyncHandler(async (req, res) => {
 
   // Only vendors can mark as completed
   if (role !== "vendor") {
-    return res
-      .status(403)
-      .json({ message: "Only vendors can mark a booking as completed" });
+    return res.status(403).json({
+      success: false,
+      message: "Only vendors can mark a booking as completed",
+    });
   }
 
   // Find booking
   const booking = await Booking.findById(bookingId);
   if (!booking) {
-    return res.status(404).json({ message: "Booking not found" });
+    return res.status(404).json({
+      success: false,
+      message: "Booking not found",
+    });
   }
 
   // Ensure vendor owns this booking
   if (booking.vendorId.toString() !== userId) {
-    return res.status(403).json({ message: "Not authorized as vendor" });
+    return res.status(403).json({
+      success: false,
+      message: "Not authorized as vendor",
+    });
   }
 
   // Update status
@@ -555,6 +608,7 @@ const markAsCompleted = asyncHandler(async (req, res) => {
   await booking.save();
 
   res.status(200).json({
+    success: true,
     message: "Booking marked as completed",
     booking,
   });
