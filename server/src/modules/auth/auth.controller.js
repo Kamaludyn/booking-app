@@ -17,15 +17,19 @@ const register = asyncHandler(async (req, res) => {
 
   // Basic input validation
   if (!surname || !othername || !email || !password || !role) {
-    return res.status(400).json({ message: "All fields are required" });
+    return res.status(400).json({
+      success: false,
+      message: "All fields are required",
+    });
   }
 
   // Check if user with provided email already exists
   const userExists = await User.findOne({ email });
   if (userExists) {
-    return res
-      .status(409)
-      .json({ message: "User with this email already exists" });
+    return res.status(409).json({
+      success: false,
+      message: "User with this email already exists",
+    });
   }
 
   // Create and save the new user
@@ -62,8 +66,9 @@ const register = asyncHandler(async (req, res) => {
   };
 
   res.status(201).json({
+    success: true,
     message: "Registration successful. Check your email to verify.",
-    user: userResponse,
+    userResponse,
   });
 });
 
@@ -76,7 +81,10 @@ const login = asyncHandler(async (req, res) => {
 
   // Validate the email and password
   if (!email || !password) {
-    return res.status(400).json({ message: "Email and password are required" });
+    return res.status(400).json({
+      success: false,
+      message: "Email and password are required",
+    });
   }
 
   // Find the user by email and explicitly include the password field
@@ -84,12 +92,18 @@ const login = asyncHandler(async (req, res) => {
 
   // If user doesn't exist, return unauthorized error
   if (!user) {
-    return res.status(401).json({ message: "Invalid credentials" });
+    return res.status(401).json({
+      success: false,
+      message: "Invalid credentials",
+    });
   }
 
   // Check if the user's email has been verified
   if (!user.isVerified) {
-    return res.status(401).json({ message: "Please verify your email first" });
+    return res.status(401).json({
+      success: false,
+      message: "Please verify your email first",
+    });
   }
 
   // Compare provided password with hashed password in DB
@@ -97,7 +111,10 @@ const login = asyncHandler(async (req, res) => {
 
   // If password doesn't match, return error
   if (!passwordMatch) {
-    return res.status(401).json({ message: "Invalid credentials" });
+    return res.status(401).json({
+      success: false,
+      message: "Invalid credentials",
+    });
   }
 
   // Credentials are valid — generate JWT token
@@ -112,7 +129,12 @@ const login = asyncHandler(async (req, res) => {
   };
 
   // Send token and user info as response
-  res.status(200).json({ token, user: userResponse });
+  res.status(200).json({
+    success: true,
+    message: "Login Successful",
+    token,
+    user: userResponse,
+  });
 });
 
 //  @desc    Verifies a user's email
@@ -133,7 +155,10 @@ const verifyEmail = asyncHandler(async (req, res) => {
 
   // If no user matches or token expired, respond with error
   if (!user) {
-    return res.status(400).json({ message: "Invalid or expired token" });
+    return res.status(400).json({
+      success: false,
+      message: "Invalid or expired token",
+    });
   }
 
   // Token is valid — mark user as verified and clear token fields
@@ -145,7 +170,10 @@ const verifyEmail = asyncHandler(async (req, res) => {
   await user.save();
 
   // Respond with success
-  res.status(200).json({ message: "Email verified successfully" });
+  res.status(200).json({
+    success: true,
+    message: "Email verified successfully",
+  });
 });
 
 //  @desc   Allows an authenticated user to change their password
@@ -159,19 +187,28 @@ const changePassword = asyncHandler(async (req, res) => {
   const user = await User.findById(userId).select("+password");
 
   if (!user) {
-    return res.status(404).json({ message: "User not found" });
+    return res.status(404).json({
+      success: false,
+      message: "User not found",
+    });
   }
 
   // Prevent user from reusing their current password
   if (currentPassword === newPassword) {
-    return res.status(400).json({ message: "New password must be different" });
+    return res.status(400).json({
+      success: false,
+      message: "New password must be different",
+    });
   }
 
   // 3. Compare entered current password with stored hash
   const isPasswordMatch = await user.comparePassword(currentPassword);
 
   if (!isPasswordMatch) {
-    return res.status(401).json({ message: "Current password is incorrect" });
+    return res.status(401).json({
+      success: false,
+      message: "Current password is incorrect",
+    });
   }
 
   // 4. Update password (hashing handled in user model pre-save hook)
@@ -182,6 +219,7 @@ const changePassword = asyncHandler(async (req, res) => {
   // const token = jwt.signToken({ userId: user._id, role: user.role });
 
   res.status(200).json({
+    success: true,
     message: "Password changed successfully",
     // token,
   });
@@ -196,12 +234,16 @@ const forgotPassword = asyncHandler(async (req, res) => {
   // Check if user with given email exists
   const user = await User.findOne({ email });
   if (!user) {
-    return res.status(404).json({ message: "No user with that email" });
+    return res.status(404).json({
+      success: false,
+      message: "No user with that email",
+    });
   }
 
   // Check if a recent token already exists and is still valid
   if (user.passwordResetExpires && user.passwordResetExpires > Date.now()) {
     return res.status(429).json({
+      success: false,
       message:
         "A reset token was recently sent. Please check your email or wait 10 minutes.",
     });
@@ -228,6 +270,7 @@ const forgotPassword = asyncHandler(async (req, res) => {
   });
 
   res.status(200).json({
+    success: true,
     message: `A password reset link is has been sent to ${email} and will expire in 10 minutes!`,
   });
 });
@@ -241,7 +284,10 @@ const resetPassword = asyncHandler(async (req, res) => {
 
   // Validate provided password
   if (!password) {
-    return res.status(400).json({ message: "Password is required" });
+    return res.status(400).json({
+      success: false,
+      message: "Password is required",
+    });
   }
   // Hash provided token to match the stored hashed version
   const hashedToken = crypto.createHash("sha256").update(token).digest("hex");
@@ -254,7 +300,10 @@ const resetPassword = asyncHandler(async (req, res) => {
 
   // If token invalid or expired, send error
   if (!user) {
-    return res.status(400).json({ message: "Token is invalid or has expired" });
+    return res.status(400).json({
+      success: false,
+      message: "Token is invalid or has expired",
+    });
   }
 
   // Update password (pre-save hook will hash it automatically)
@@ -274,6 +323,7 @@ const resetPassword = asyncHandler(async (req, res) => {
 
   // Respond with success + token
   res.status(200).json({
+    success: true,
     message: "Password reset successful",
     token: authToken, // Include token if auto-login
     user: {
@@ -288,7 +338,10 @@ const resetPassword = asyncHandler(async (req, res) => {
 //  @route  PATCH /api/v1/auth/logout
 //  @access Public
 const logout = (req, res) => {
-  res.json({ message: "Log out successful" });
+  res.json({
+    success: true,
+    message: "You are logged out successfully!",
+  });
 };
 
 module.exports = {
