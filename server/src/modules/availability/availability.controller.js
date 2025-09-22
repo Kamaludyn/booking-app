@@ -11,6 +11,7 @@ const createAvailability = asyncHandler(async (req, res) => {
   // Validate inputs
   if (!timezone || !Array.isArray(weeklyAvailability)) {
     return res.status(400).json({
+      success: false,
       message: "Timezone, and weekly availability are required.",
     });
   }
@@ -19,6 +20,7 @@ const createAvailability = asyncHandler(async (req, res) => {
   const existing = await Availability.findOne({ vendorId });
   if (existing) {
     return res.status(400).json({
+      success: false,
       message: "Availability already exists. Use the update endpoint.",
     });
   }
@@ -31,6 +33,7 @@ const createAvailability = asyncHandler(async (req, res) => {
   });
 
   res.status(201).json({
+    success: true,
     message: "Availability created successfully.",
     availability,
   });
@@ -47,6 +50,7 @@ const updateAvailability = asyncHandler(async (req, res) => {
   const availability = await Availability.findOne({ vendorId });
   if (!availability) {
     return res.status(404).json({
+      success: false,
       message: "No availability found to update.",
     });
   }
@@ -84,6 +88,7 @@ const updateAvailability = asyncHandler(async (req, res) => {
   await availability.save();
 
   res.status(200).json({
+    success: true,
     message: "Availability updated successfully.",
     availability,
   });
@@ -100,11 +105,13 @@ const getAvailability = asyncHandler(async (req, res) => {
   // If no availability document is found, return a 404 error
   if (!availability) {
     return res.status(404).json({
+      success: false,
       message: "Availability not found.",
     });
   }
 
   res.status(200).json({
+    success: true,
     availability,
   });
 });
