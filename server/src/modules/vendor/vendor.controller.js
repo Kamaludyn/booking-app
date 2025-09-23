@@ -18,12 +18,18 @@ const createVendorProfile = asyncHandler(async (req, res) => {
   const vendorExist = await VendorProfile.findOne({ userId });
   // If profile exists, return a conflict status
   if (vendorExist) {
-    return res.status(409).json({ message: "Profile already exists" });
+    return res.status(409).json({
+      success: false,
+      message: "Profile already exists",
+    });
   }
 
   // Basic input validation
   if (!businessName || !businessEmail || !phone) {
-    return res.status(400).json({ message: "Required fields are missing" });
+    return res.status(400).json({
+      success: false,
+      message: "Required fields are missing",
+    });
   }
 
   // Create a new Vendor Profile and associate it with the user
@@ -38,7 +44,11 @@ const createVendorProfile = asyncHandler(async (req, res) => {
     taxId,
   });
 
-  res.status(200).json({ vendor: profile });
+  res.status(200).json({
+    success: true,
+    message: "Profile created successfully!",
+    vendor: profile,
+  });
 });
 
 //  @desc    Get Vendor Profile
@@ -51,10 +61,16 @@ const getVendorProfile = asyncHandler(async (req, res) => {
   const vendor = await VendorProfile.findOne({ userId });
   // Return a 404 error if vendor profile is not found,
   if (!vendor) {
-    res.status(404).json({ message: "Vendor profile not found" });
+    res.status(404).json({
+      success: false,
+      message: "Vendor profile not found",
+    });
   }
   // Return the found profile
-  return res.status(200).json({ vendor });
+  return res.status(200).json({
+    success: true,
+    vendor,
+  });
 });
 
 //  @desc    Update Vendor Profile
@@ -76,11 +92,18 @@ const updateVendorProfile = asyncHandler(async (req, res) => {
 
   // If no vendor profile is found for the user, return a 404 error
   if (!updatedVendor) {
-    return res.status(404).json({ message: "Vendor profile not found" });
+    return res.status(404).json({
+      success: false,
+      message: "Vendor profile not found",
+    });
   }
 
   // Return updated profile to client
-  res.status(200).json({ vendor: updatedVendor });
+  res.status(200).json({
+    success: true,
+    message: "Profile Update Successfull",
+    vendor: updatedVendor,
+  });
 });
 
 //  @desc    Upload vendor logo
@@ -95,14 +118,20 @@ const uploadVendorLogo = asyncHandler(async (req, res) => {
 
   // If no logo URL is provided, return a 400 error
   if (!newLogoUrl) {
-    return res.status(400).json({ message: "No logo uploaded" });
+    return res.status(400).json({
+      success: false,
+      message: "No logo uploaded",
+    });
   }
 
   // Find the vendor profile by user ID
   const vendor = await VendorProfile.findOne({ userId });
   // If no vendor profile is found, return a 404 error
   if (!vendor) {
-    return res.status(404).json({ message: "Vendor profile not found" });
+    return res.status(404).json({
+      success: false,
+      message: "Vendor profile not found",
+    });
   }
 
   // Delete old logo from Cloudinary if it exists
@@ -116,9 +145,11 @@ const uploadVendorLogo = asyncHandler(async (req, res) => {
   vendor.logoUrl = newLogoUrl;
   await vendor.save();
 
-  res
-    .status(200)
-    .json({ message: "Logo uploaded successfully", logo: vendor.logoUrl });
+  res.status(200).json({
+    success: true,
+    message: "Logo uploaded successfully",
+    logo: vendor.logoUrl,
+  });
 });
 
 //  @desc    DELETE logo — remove from Cloudinary and DB
@@ -130,7 +161,10 @@ const deleteVendorLogo = asyncHandler(async (req, res) => {
 
   // If no vendor profile is found, return a 404 error
   if (!vendor || !vendor.logo) {
-    return res.status(404).json({ message: "No logo to delete" });
+    return res.status(404).json({
+      success: false,
+      message: "No logo to delete",
+    });
   }
 
   // Delete from Cloudinary
@@ -143,7 +177,10 @@ const deleteVendorLogo = asyncHandler(async (req, res) => {
   vendor.logo = "";
   await vendor.save();
 
-  res.status(200).json({ message: "Logo deleted" });
+  res.status(200).json({
+    success: false,
+    message: "Logo deleted",
+  });
 });
 
 module.exports = {
