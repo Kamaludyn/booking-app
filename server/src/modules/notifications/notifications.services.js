@@ -3,6 +3,7 @@ const User = require("../auth/auth.model");
 const sendEmail = require("../../lib/sendEmail");
 
 const sendNotification = async ({
+  email,
   userId,
   bookingId,
   type,
@@ -10,9 +11,14 @@ const sendNotification = async ({
   subject,
   message,
 }) => {
-  // Fetch the recipient user and get their email
-  const user = await User.findById(userId).select("email");
+  let user;
 
+  if (userId) {
+    // Fetch the recipient user and get their email
+    user = await User.findById(userId).select("email");
+  }
+
+  const userEmail = email || user.email;
   const notifResults = [];
 
   // Loop through all requested channels and handle them one by one
@@ -30,7 +36,7 @@ const sendNotification = async ({
     try {
       if (channel === "email") {
         // Send out an email notification to the user
-        await sendEmail({ to: user.email, subject, text: message });
+        await sendEmail({ to: userEmail, subject, text: message });
         // Mark as successfully sent
 
         notif.sent = true;

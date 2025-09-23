@@ -6,8 +6,11 @@ const Reservation = require("../../reservation/reservation.model");
 const recalcBookingPayment = require("../services/recalcBookingPayment.service.js");
 const toUtcDate = require("../../../utils/convertTime");
 const Service = require("../../services/services.model.js");
-const Notification = require("../../notifications/notifications.model.js");
+const sendNotification = require("../notifications/notifications.services.js");
 
+// @desc   Stripe payment webhook
+// @route   GET /api/v1/payments/stripe/webhook
+// @access  Stripe
 const stripeWebhook = async (req, res) => {
   const sig = req.headers["stripe-signature"];
   let event;
@@ -18,7 +21,6 @@ const stripeWebhook = async (req, res) => {
       process.env.STRIPE_WEBHOOK_SECRET
     );
   } catch (error) {
-    console.error("Stripe signature verification failed", error);
     return res.status(400).send(`Webhook Error: ${error.message}`);
   }
 
@@ -43,7 +45,9 @@ const stripeWebhook = async (req, res) => {
         const sessionDB = await mongoose.startSession();
         await sessionDB.withTransaction(async () => {
           // Find the payment doc and lock it for update
-          const payment = await Payment.findById(paymentId).session(sessionDB);
+          const payment = await Payment.findById(paymentId)
+            .populate("bookingId", "client date time")
+            .session(sessionDB);
 
           if (!payment) {
             throw new Error(`Payment with ID {paymentId} not found.`);
@@ -64,32 +68,68 @@ const stripeWebhook = async (req, res) => {
 
           // If tied to an existing booking, recalc
           if (payment.bookingId) {
+            const booking = payment.bookingId;
+
             await recalcBookingPayment(payment.bookingId);
+
+            // Send notification to user
+            await sendNotification({
+              email: booking.client.email,
+              userId: booking.client.Id,
+              bookingId: booking._id,
+              type: "PAYMENT_RECEIVED",
+              channels: ["email", "inapp"],
+              subject: "Payment Confirmation",
+              message: `We’ve received your payment of ${payment.currency}${
+                payment.amountPaid
+              } for your booking on ${
+                booking.date
+              } at ${booking.time.start.toLocaleTimeString()}. Thank you!`,
+            });
+
+            // Send notification to vendor
+            await sendNotification({
+              userId: payment.vendorId,
+              bookingId: payment.bookingId,
+              type: "PAYMENT_RECEIVED",
+              channels: ["email", "inapp"],
+              subject: "Payment Confirmation",
+              message: `${booking.client.name || "A client"} has paid ${
+                payment.currncy
+              }${payment.amountPaid} for their booking on ${
+                booking.date
+              } at ${booking.time.start.toLocaleTimeString()}.`,
+              link: `/dashboard/payments/${payment._id}`,
+            });
           } else if (payment.reservationId) {
             // PRE-BOOKING: create booking from reservation and attach payment.bookingId
             const reservation = await Reservation.findById(
               payment.reservationId
             ).session(sessionDB);
             if (!reservation) {
-              // reservation might have expired but payment succeeded, abort the transaction
+              // reservation might have expired but payment succeeded.
+
+              //  Send notification to vendor
+              await sendNotification({
+                userId: payment.vendorId,
+                type: "MISSING_RESERVATION",
+                channel: ["email", "inapp"],
+                subject: "Payment received without reservation",
+                message: `A payment was successfully received for your service "${
+                  payment.serviceId.name
+                }"
+                from client ${payment.clientSnapshot.name} (${
+                  payment.clientSnapshot.email || payment.clientSnapshot.phone
+                }).
+                However, the associated reservation could not be found, so no booking was created automatically.
+                Please review this payment and create a booking manually if needed or contact the client.`,
+                link: `/dashboard/payments/${payment._id}`,
+              });
+
+              // Abort the transaction
               throw new Error(
                 `Reservation ${payment.reservationId} not found for payment ${paymentId}. Transaction aborted.`
               );
-              // await Notification.create({
-              //   userId: payment.vendorId,
-              //   type: "MISSING_RESERVATION",
-              //   channel: ["email", "inapp"],
-              //   subject: "Payment received without reservation",
-              //   message: `A payment was successfully received for your service "${
-              //     payment.serviceId.name
-              //   }"
-              //   from client ${payment.clientSnapshot.name} (${
-              //     payment.clientSnapshot.email || payment.clientSnapshot.phone
-              //   }).
-              //   However, the associated reservation could not be found, so no booking was created automatically.
-              //   Please review this payment and create a booking manually if needed or contact the client.`,
-              //   link: `/dashboard/payments/${payment._id}`,
-              // });
             }
 
             const { bookingPayload, serviceId, vendorId } = reservation;
@@ -145,6 +185,35 @@ const stripeWebhook = async (req, res) => {
             await Reservation.findByIdAndDelete(reservation._id, {
               session: sessionDB,
             });
+
+            // Send notification to user
+            await sendNotification({
+              email: booking.client.email,
+              userId: booking.client?.id,
+              bookingId: booking._id,
+              type: "PAYMENT_RECEIVED",
+              channels: ["email", "inapp"],
+              subject: "Payment Confirmation",
+              message: `We’ve received your payment of ${payment.curreny}${
+                payment.amountPaid
+              } for your booking on ${
+                booking.date
+              } at ${booking.time.start.toLocaleTimeString()}. Thank you!`,
+            });
+
+            // Send notification to vendor
+            await sendNotification({
+              userId: booking.vendorId,
+              bookingId: booking._id,
+              type: "PAYMENT_RECEIVED",
+              channels: ["email", "inapp"],
+              subject: "Payment Confirmation",
+              message: `${
+                booking.client?.name || "A client"
+              } has paid ${amountPaid} ${currency} for their booking on ${
+                booking.date
+              } at ${booking.time.start.toLocaleTimeString()}.`,
+            });
           }
         });
 
@@ -194,7 +263,6 @@ const stripeWebhook = async (req, res) => {
     }
     res.json({ received: true });
   } catch (error) {
-    console.error("Webhook handler error", error);
     return res.status(500).send("Webhook handler failed");
   }
 };

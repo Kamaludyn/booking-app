@@ -26,34 +26,6 @@ const processPayment = asyncHandler(async (req, res) => {
     notes,
   });
 
-  // Send notification to user
-  if (booking.client.id !== null) {
-    await sendNotification({
-      userId: booking.client?.id,
-      bookingId: booking._id,
-      type: "PAYMENT_RECEIVED",
-      channels: ["email", "inapp"],
-      subject: "Payment Confirmation",
-      message: `We’ve received your payment of ${amountPaid} ${currency} for your booking on ${
-        booking.date
-      } at ${booking.time.start.toLocaleTimeString()}. Thank you!`,
-    });
-  }
-
-  // Send notification to vendor
-  await sendNotification({
-    userId: booking.vendorId,
-    bookingId: booking._id,
-    type: "PAYMENT_RECEIVED",
-    channels: ["email", "inapp"],
-    subject: "Payment Confirmation",
-    message: `${
-      booking.client?.name || "A client"
-    } has paid ${amountPaid} ${currency} for their booking on ${
-      booking.date
-    } at ${booking.time.start.toLocaleTimeString()}.`,
-  });
-
   res.status(201).json({
     success: true,
     message: "Payment recorded.",
@@ -375,14 +347,12 @@ const addOfflinePayment = asyncHandler(async (req, res) => {
   // Recalculate booking payment and status
   await recalcBookingPayment(booking._id);
 
-  res
-    .status(201)
-    .json({
-      success: true,
-      message: "Offline Payment successful!",
-      payment,
-      booking,
-    });
+  res.status(201).json({
+    success: true,
+    message: "Offline Payment successful!",
+    payment,
+    booking,
+  });
 });
 
 // @desc   Get Total revenue (with optional date range)

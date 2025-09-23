@@ -5,7 +5,7 @@ const notificationSchema = new mongoose.Schema(
     userId: {
       type: mongoose.Schema.Types.ObjectId,
       ref: "User",
-      required: true,
+      default: null,
     },
     bookingId: {
       type: mongoose.Schema.Types.ObjectId,
