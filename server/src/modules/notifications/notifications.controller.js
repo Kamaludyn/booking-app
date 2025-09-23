@@ -1,7 +1,6 @@
 const Notification = require("./notifications.model");
 const User = require("../auth/auth.model");
 const asyncHandler = require("express-async-handler");
-const sendEmail = require("../../lib/sendEmail");
 const sendNotification = require("./notifications.services");
 
 //  @desc    Sends notifications to users via specified channels
@@ -12,7 +11,11 @@ const sendNotifications = asyncHandler(async (req, res) => {
   const notifications = await sendNotification(req.body);
 
   // Return the created notifications
-  res.status(200).json({ success: true, notifications });
+  res.status(200).json({
+    success: true,
+    message: "Notification sent successfully!",
+    notifications,
+  });
 });
 
 //  @desc    Get notifications
