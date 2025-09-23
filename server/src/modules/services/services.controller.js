@@ -19,7 +19,10 @@ const createService = asyncHandler(async (req, res) => {
 
   // Validate required fields
   if (!name || !description || !duration || !price || !currency) {
-    return res.status(400).json({ message: "Missing required fields" });
+    return res.status(400).json({
+      success: false,
+      message: "Missing required fields",
+    });
   }
 
   // Save to DB
@@ -36,6 +39,7 @@ const createService = asyncHandler(async (req, res) => {
   });
 
   res.status(201).json({
+    success: true,
     message: "Service created successfully",
     service,
   });
@@ -50,11 +54,17 @@ const getServices = asyncHandler(async (req, res) => {
 
   // Return error if no services found
   if (!services || services.length === 0) {
-    return res.status(404).json({ message: "No services found" });
+    return res.status(404).json({
+      success: false,
+      message: "No services found",
+    });
   }
 
   // Return services
-  res.status(200).json({ services });
+  res.status(200).json({
+    success: true,
+    services,
+  });
 });
 
 // @desc    Fetch only active services
@@ -66,11 +76,15 @@ const getActiveServices = asyncHandler(async (req, res) => {
 
   // Return error if no active services found
   if (!services || services.length === 0) {
-    return res.status(404).json({ message: "No active services found" });
+    return res.status(404).json({
+      success: false,
+      message: "No active services found",
+    });
   }
 
   // Return active services
   res.status(200).json({
+    success: true,
     message: "Active services fetched successfully",
     services,
   });
@@ -87,10 +101,13 @@ const getServiceById = asyncHandler(async (req, res) => {
 
   //  Return error if not found
   if (!service) {
-    return res.status(404).json({ message: "Service not found" });
+    return res.status(404).json({
+      success: false,
+      message: "Service not found",
+    });
   }
 
-  res.status(200).json({ service });
+  res.status(200).json({ success: true, service });
 });
 
 // @desc    Update service
@@ -109,14 +126,17 @@ const updateService = asyncHandler(async (req, res) => {
 
   // Return Error if service is not found
   if (!updatedService) {
-    return res
-      .status(404)
-      .json({ message: "Service not found or unauthorized" });
+    return res.status(404).json({
+      success: false,
+      message: "Service not found or unauthorized",
+    });
   }
 
-  res
-    .status(201)
-    .json({ message: "service updated successfully", updatedService });
+  res.status(201).json({
+    success: true,
+    message: "service updated successfully",
+    updatedService,
+  });
 });
 
 // @desc    Delete a service
@@ -134,12 +154,16 @@ const deleteService = asyncHandler(async (req, res) => {
 
   // Return error if srvice is not found
   if (!service) {
-    return res
-      .status(404)
-      .json({ message: "Service not found or unauthorized" });
+    return res.status(404).json({
+      success: false,
+      message: "Service not found or unauthorized",
+    });
   }
 
-  res.status(200).json({ message: "Service deleted successfully" });
+  res.status(200).json({
+    success: true,
+    message: "Service deleted successfully",
+  });
 });
 
 module.exports = {
