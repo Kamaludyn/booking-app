@@ -57,7 +57,8 @@ const processPayment = asyncHandler(async (req, res) => {
   res.status(201).json({
     success: true,
     message: "Payment recorded.",
-    data: { payment, booking },
+    payment,
+    booking,
   });
 });
 
@@ -83,11 +84,13 @@ const getPaymentById = asyncHandler(async (req, res) => {
   // Validate vendor
   if (role !== "vendor" && payment.vendorId.toString() !== userId.toString()) {
     return res.status(403).json({
+      success: false,
       message: "Access denied",
     });
   }
 
   res.status(200).json({
+    success: true,
     message: "Payment fetched successfully",
     payment,
   });
@@ -123,12 +126,14 @@ const getPaymentsByBooking = asyncHandler(async (req, res) => {
   // Authorization checks
   if (role === "vendor" && booking.vendorId.toString() !== userId.toString()) {
     return res.status(403).json({
+      success: false,
       message: "Not authorized to view these payments",
     });
   }
 
   if (role === "client" && booking.client.id.toString() !== userId.toString()) {
     return res.status(403).json({
+      success: false,
       message: "Not authorized to view these payments",
     });
   }
@@ -159,6 +164,7 @@ const getPaymentsByBooking = asyncHandler(async (req, res) => {
   };
 
   res.status(200).json({
+    success: true,
     message: "All payments fetched successfully",
     count: payments.length,
     summary,
@@ -181,11 +187,13 @@ const getMyPayments = asyncHandler(async (req, res) => {
     payments = await Payment.find({ clientId: userId }).sort({ createdAt: -1 });
   } else {
     return res.status(403).json({
+      success: false,
       message: "Not authorized to view payments",
     });
   }
 
   res.status(200).json({
+    success: true,
     message: "Payments fetched successfully",
     count: payments.length,
     payments,
@@ -203,15 +211,17 @@ const updatePaymentStatus = asyncHandler(async (req, res) => {
   // Validate input
   if (!status) {
     return res.status(400).json({
+      success: false,
       message: "Status is required",
     });
   }
 
   // Restrict clients from making updates
   if (role === "client") {
-    return res
-      .status(403)
-      .json({ message: "Clients cannot update online payments manually" });
+    return res.status(403).json({
+      success: false,
+      message: "Clients cannot update online payments manually",
+    });
   }
 
   // Fetch payment details
@@ -221,29 +231,37 @@ const updatePaymentStatus = asyncHandler(async (req, res) => {
   );
 
   if (!payment) {
-    return res.status(404).json({ message: "Payment not found" });
+    return res.status(404).json({
+      success: false,
+      message: "Payment not found",
+    });
   }
 
   // Authorization checks
   if (payment.method === "offline" && role !== "vendor") {
-    return res
-      .status(403)
-      .json({ message: "Only vendor can update offline payments" });
+    return res.status(403).json({
+      success: false,
+      message: "Only vendor can update offline payments",
+    });
   }
 
   if (
     role === "vendor" &&
     payment.bookingId.vendorId.toString() !== userId.toString()
   ) {
-    return res
-      .status(403)
-      .json({ message: "Not authorized to update this payment" });
+    return res.status(403).json({
+      success: false,
+      message: "Not authorized to update this payment",
+    });
   }
 
   // Validate allowed status
   const validStatuses = ["pending", "paid", "failed", "refunded"];
   if (status && !validStatuses.includes(status)) {
-    return res.status(400).json({ message: "Invalid payment status" });
+    return res.status(400).json({
+      success: false,
+      message: "Invalid payment status",
+    });
   }
 
   // Prevent illegal transitions
@@ -264,6 +282,7 @@ const updatePaymentStatus = asyncHandler(async (req, res) => {
         }
       } else {
         return res.status(400).json({
+          success: false,
           message: `Invalid status transition for ${method} payment`,
         });
       }
@@ -275,6 +294,7 @@ const updatePaymentStatus = asyncHandler(async (req, res) => {
       }
     } else {
       return res.status(400).json({
+        success: false,
         message: `Invalid status transition for ${method} payment`,
       });
     }
@@ -284,7 +304,8 @@ const updatePaymentStatus = asyncHandler(async (req, res) => {
   await payment.save();
 
   res.status(200).json({
-    message: "Payment updated successfully",
+    success: true,
+    message: "Payment updated successfully!",
     payment,
   });
 });
@@ -299,28 +320,43 @@ const addOfflinePayment = asyncHandler(async (req, res) => {
 
   // Validate inputs
   if (!amount || amount <= 0)
-    return res.status(400).json({ message: "Amount is required" });
+    return res.status(400).json({
+      success: false,
+      message: "Amount is required",
+    });
 
   if (method !== "offline")
-    return res.status(400).json({ message: "Invalid payment method" });
+    return res.status(400).json({
+      success: false,
+      message: "Invalid payment method",
+    });
   if (!notes)
-    return res
-      .status(400)
-      .json({ message: "A notes describing payment type is required" });
+    return res.status(400).json({
+      success: false,
+      message: "A notes describing payment type is required",
+    });
 
   // Fetch booking
   const booking = await Booking.findById(bookingId);
-  if (!booking) return res.status(404).json({ message: "Booking not found" });
+  if (!booking)
+    return res.status(404).json({
+      success: false,
+      message: "Booking not found",
+    });
 
   // Authorization check
   if (role !== "vendor" || booking.vendorId.toString() !== userId.toString())
-    return res.status(403).json({ message: "Not authorized" });
+    return res.status(403).json({
+      success: false,
+      message: "Not authorized",
+    });
 
   // Check if booking is already paid
   if (amount > booking.payment.balanceAmount) {
-    return res
-      .status(400)
-      .json({ message: "Amount exceeds remaining balance" });
+    return res.status(400).json({
+      success: false,
+      message: "Amount exceeds remaining balance",
+    });
   }
 
   // Create offline payment
@@ -339,7 +375,14 @@ const addOfflinePayment = asyncHandler(async (req, res) => {
   // Recalculate booking payment and status
   await recalcBookingPayment(booking._id);
 
-  res.status(201).json({ success: true, payment, booking });
+  res
+    .status(201)
+    .json({
+      success: true,
+      message: "Offline Payment successful!",
+      payment,
+      booking,
+    });
 });
 
 // @desc   Get Total revenue (with optional date range)
@@ -351,7 +394,10 @@ const getTotalRevenue = asyncHandler(async (req, res) => {
 
   // Authorization check
   if (role !== "vendor") {
-    return res.status(403).json({ message: "Not authorized" });
+    return res.status(403).json({
+      success: false,
+      message: "Not authorized",
+    });
   }
 
   const vendorId = userId;
@@ -359,7 +405,8 @@ const getTotalRevenue = asyncHandler(async (req, res) => {
   const end = new Date(endDate);
 
   const revenue = await getRevenue(vendorId, start, end);
-  res.json({ success: true, revenue });
+
+  res.status(200).json({ success: true, revenue });
 });
 
 // @desc   Get Total refunds (with optional date range)
@@ -371,7 +418,10 @@ const getTotalRefunds = asyncHandler(async (req, res) => {
 
   // Authorization check
   if (role !== "vendor") {
-    return res.status(403).json({ message: "Not authorized" });
+    return res.status(403).json({
+      success: false,
+      message: "Not authorized",
+    });
   }
 
   const vendorId = userId;
@@ -379,7 +429,7 @@ const getTotalRefunds = asyncHandler(async (req, res) => {
   const end = new Date(endDate);
 
   const refunds = await getRefunds(vendorId, start, end);
-  res.json({ success: true, refunds });
+  res.status(200).json({ success: true, refunds });
 });
 
 // @desc   Get Total balance
@@ -390,13 +440,17 @@ const getUnsettledBalance = asyncHandler(async (req, res) => {
 
   // Authorization check
   if (role !== "vendor") {
-    return res.status(403).json({ message: "Not authorized" });
+    return res.status(403).json({
+      success: false,
+      message: "Not authorized",
+    });
   }
 
   const vendorId = userId;
 
   const unsettledBalances = await getBalance(vendorId);
-  res.json({ success: true, unsettledBalances });
+
+  res.status(200).json({ success: true, unsettledBalances });
 });
 
 module.exports = {
