@@ -3,7 +3,7 @@ import { createBrowserRouter } from "react-router-dom";
 import RootLayout from "./service-provider/layouts/RootLayout";
 
 import Login from "./service-provider/pages/auth/Login";
-import Register from "./service-provider/pages/auth/Register";
+import SignUp from "./booking/pages/auth/SignUp";
 import BookingPage from "./booking/pages/BookingPage";
 import DashboardHome from "./service-provider/pages/dashboard/Home";
 import Appointments from "./service-provider/pages/appointments/Appointments";
@@ -49,6 +49,7 @@ const router = createBrowserRouter([
         path: "/book-services",
         element: <ServiceListing />,
       },
+      { path: "sign-up", element: <SignUp /> },
       {
         path: "/booking/:id",
         element: <ServiceListingDetails />,
@@ -77,7 +78,6 @@ const router = createBrowserRouter([
         element: <DashboardHome />,
       },
       { path: "login", element: <Login /> },
-      { path: "register", element: <Register /> },
       {
         path: "appointments",
         element: <Appointments />,

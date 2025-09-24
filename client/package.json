@@ -13,10 +13,12 @@
     "@stripe/react-stripe-js": "^3.7.0",
     "@stripe/stripe-js": "^7.3.0",
     "@tailwindcss/vite": "^4.1.6",
+    "axios": "^1.12.2",
     "date-fns": "^4.1.0",
     "lucide-react": "^0.509.0",
     "react": "^19.1.0",
     "react-dom": "^19.1.0",
+    "react-loading-indicators": "^1.0.1",
     "react-router-dom": "^7.6.0",
     "recharts": "^2.15.3",
     "tailwindcss": "^4.1.6"
