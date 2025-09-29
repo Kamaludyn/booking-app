@@ -6,6 +6,9 @@ const protect = require("../../middleware/auth");
 // @route   POST /api/v1/booking
 router.post("/", bookingController.createBooking);
 
+// @route   Get /api/v1/booking/confirm-booking/:bookingId/:token
+router.post("/", bookingController.confirmBooking);
+
 // Protect all routes below this point
 router.use(protect);
 

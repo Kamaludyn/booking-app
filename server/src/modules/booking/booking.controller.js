@@ -261,6 +261,63 @@ const createBooking = asyncHandler(async (req, res) => {
   });
 });
 
+//  @desc    Confirm booking through email
+//  @route   GET /api/v1/booking/confirm-booking/:token
+//  @access  Public
+const confirmBooking = asyncHandler(async (req, res) => {
+  // Get token from url parameter
+  const { bookingId, token } = req.params;
+
+  // validate parameters
+  if (!bookingId || !token) {
+    return res.status(400).json({
+      success: false,
+      message: "Booking ID and token are required.",
+    });
+  }
+
+  // Hash the received token to compare it with the stored hashed token
+  const hashedToken = crypto.createHash("sha256").update(token).digest("hex");
+
+  // Look up the booking with matching id, token and a non-expired verification timestamp
+  const booking = await Booking.findOne({
+    _id: bookingId,
+    bookingVerificationToken: hashedToken,
+    bookingVerificationExpires: { $gt: Date.now() }, // Token must still be valid
+  });
+
+  if (!booking) {
+    res.status(400).json({
+      success: false,
+      message: "Invalid or expired token",
+    });
+  }
+
+  // Mark booking as verified and clear verification fields
+  booking.isVerified = true;
+  booking.bookingVerificationToken = undefined;
+  booking.bookingVerificationExpires = undefined;
+
+  // save updates
+  await booking.save();
+
+  // Send notification to vendor
+  await sendNotification({
+    userId: booking.vendorId,
+    bookingId: booking._id,
+    type: "BOOKING_CONFIRMED",
+    channels: ["email", "inapp"],
+    subject: "Booking Confirmation",
+    message: `A new booking has been confirmed for ${date} at ${time.start}. Click here to view the details: ${process.env.CLIENT_URL}/bookings/${booking._id}`,
+  });
+
+  res.status(200).json({
+    success: true,
+    message: "Booking successfully verified!",
+    booking,
+  });
+});
+
 //  @desc    Fetch all bookings for a user (vendor or client)
 //  @route   GET /api/v1/bookings
 //  @access  Private
@@ -642,6 +699,7 @@ const markAsCompleted = asyncHandler(async (req, res) => {
 
 module.exports = {
   createBooking,
+  confirmBooking,
   getBookings,
   getBooking,
   rescheduleBooking,
