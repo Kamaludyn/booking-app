@@ -98,14 +98,6 @@ const login = asyncHandler(async (req, res) => {
     });
   }
 
-  // Check if the user's email has been verified
-  if (!user.isVerified) {
-    return res.status(401).json({
-      success: false,
-      message: "Please verify your email first",
-    });
-  }
-
   // Compare provided password with hashed password in DB
   const passwordMatch = await user.comparePassword(password);
 
@@ -141,8 +133,14 @@ const login = asyncHandler(async (req, res) => {
 //  @route   GET /api/v1/auth/verify-email/:token
 //  @access  Public
 const verifyEmail = asyncHandler(async (req, res) => {
-  // const verifyEmail = async (req, res, next) => {
   const { token } = req.params; // Get the token from the route parameter
+
+  if (!token) {
+    res.status(400).json({
+      success: false,
+      message: "Missing token",
+    });
+  }
 
   // Hash the received token to compare it with the stored hashed token
   const hashedToken = crypto.createHash("sha256").update(token).digest("hex");
