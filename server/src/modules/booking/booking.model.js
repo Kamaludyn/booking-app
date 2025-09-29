@@ -47,6 +47,7 @@ const bookingSchema = new mongoose.Schema(
     status: {
       type: String,
       enum: [
+        "pending_verification",
         "upcoming",
         "completed",
         "missed",
@@ -113,6 +114,12 @@ const bookingSchema = new mongoose.Schema(
       reason: { type: String },
       processedAt: { type: Date },
     },
+    isVerified: {
+      type: Boolean,
+      default: false,
+    },
+    bookingVerificationToken: String,
+    bookingVerificationExpires: Date,
   },
   {
     timestamps: true,
