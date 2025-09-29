@@ -6,7 +6,7 @@ const Reservation = require("../../reservation/reservation.model");
 const recalcBookingPayment = require("../services/recalcBookingPayment.service.js");
 const toUtcDate = require("../../../utils/convertTime");
 const Service = require("../../services/services.model.js");
-const sendNotification = require("../notifications/notifications.services.js");
+const sendNotification = require("../../notifications/notifications.services.js");
 
 // @desc   Stripe payment webhook
 // @route   GET /api/v1/payments/stripe/webhook
