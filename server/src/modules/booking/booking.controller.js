@@ -1,13 +1,16 @@
+const User = require("../auth/auth.model");
 const Booking = require("./booking.model");
 const Service = require("../services/services.model");
 const Payment = require("../payment/payment.model");
 const Reservation = require("../reservation/reservation.model");
+const crypto = require("crypto");
 const asyncHandler = require("express-async-handler");
 const generateBookableSlots = require("./generateBookableSlots.service");
 const toUtcDate = require("../../utils/convertTime");
 const createPayment = require("../payment/services/createPayment.service");
 const calculateRefund = require("../payment/services/calcRefund.service");
 const sendNotification = require("../notifications/notifications.services");
+const sendEmail = require("../../lib/sendEmail.js");
 
 const RESERVATION_TTL_MINUTES = process.env.RESERVATION_TTL_MINUTES || 15;
 
@@ -16,7 +19,6 @@ const RESERVATION_TTL_MINUTES = process.env.RESERVATION_TTL_MINUTES || 15;
 //  @access  Public
 const createBooking = asyncHandler(async (req, res) => {
   // Extract and validate required input fields
-  const user = req.user;
   const {
     serviceId,
     client,
@@ -28,6 +30,8 @@ const createBooking = asyncHandler(async (req, res) => {
     createdBy,
     payments,
   } = req.body;
+
+  const user = await User.findById(req.user.userId);
 
   if (!serviceId || !client || !date || !time || !timezone || !createdBy) {
     return res.status(400).json({
@@ -49,11 +53,11 @@ const createBooking = asyncHandler(async (req, res) => {
   }
 
   // Validate client contact fields based on who initiated the booking
-  if (createdBy === "client") {
-    if (!client.email || !client.phone) {
+  if (!user || createdBy === "client") {
+    if (!client.name && !client.email) {
       return res.status(400).json({
         success: false,
-        message: "Email and phone number are required.",
+        message: "Email and name are required.",
       });
     }
   } else if (createdBy === "vendor") {
@@ -146,7 +150,12 @@ const createBooking = asyncHandler(async (req, res) => {
       timeEnd: time.end,
       timezone,
       bookingPayload: {
-        client,
+        client: {
+          id: user._id || null, // null for guests
+          name: client.name,
+          email: client.email,
+          phone: client.phone || null,
+        },
         date,
         time,
         timezone,
@@ -186,7 +195,12 @@ const createBooking = asyncHandler(async (req, res) => {
   const booking = await Booking.create({
     vendorId,
     serviceId,
-    client,
+    client: {
+      id: user.userId || null, // null for guests
+      name: client.name,
+      email: client.email,
+      phone: client.phone || null,
+    },
     date,
     time: {
       start: startTime,
@@ -195,7 +209,7 @@ const createBooking = asyncHandler(async (req, res) => {
     timezone,
     notes,
     createdBy,
-    status: "upcoming",
+    status: notVerified ? "pending_verification" : "upcoming",
     payment: {
       status: "pending",
       balanceAmount: service.price, // Initial balance is the full service price
@@ -206,31 +220,43 @@ const createBooking = asyncHandler(async (req, res) => {
     },
   });
 
-  // Send notification to user
-  if (booking.client.id !== null) {
+  let notVerified = !user || !user.isVerified;
+
+  if (notVerified) {
+    const { hashedToken, expiresAt } = await sendBookingVerificationEmail(
+      booking._id,
+      client.email
+    );
+
+    booking.bookingVerificationToken = hashedToken;
+    booking.bookingVerificationExpires = expiresAt;
+  } else {
+    // Send notification to user
     await sendNotification({
-      userId: booking.client?.id,
+      userId: user.id,
       bookingId: booking._id,
       type: "BOOKING_CONFIRMED",
       channels: ["email", "inapp"],
       subject: "Booking Confirmation",
       message: `Your booking for ${service.name} on ${date} at ${time.start} has been confirmed.`,
     });
-  }
 
-  // Send notification to vendor
-  await sendNotification({
-    userId: booking.vendorId,
-    bookingId: booking._id,
-    type: "BOOKING_CONFIRMED",
-    channels: ["email", "inapp"],
-    subject: "Booking Confirmation",
-    message: `A new booking for ${service.name} has been confirmed for ${date} at ${time.start}.`,
-  });
+    // Send notification to vendor
+    await sendNotification({
+      userId: booking.vendorId,
+      bookingId: booking._id,
+      type: "BOOKING_CONFIRMED",
+      channels: ["email", "inapp"],
+      subject: "Booking Confirmation",
+      message: `A new booking for ${service.name} has been confirmed for ${date} at ${time.start}.`,
+    });
+  }
 
   res.status(201).json({
     success: true,
-    message: "Booking created successfully",
+    message: notVerified
+      ? "Pending booking created, awaiting email confirmation"
+      : "Booking created successfully",
     booking,
   });
 });
