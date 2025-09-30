@@ -1,24 +1,29 @@
 import { useState } from "react";
-import { Link } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
 import api from "../../../shared/services/api";
 import { ThreeDot } from "react-loading-indicators";
 
 const SignUp = () => {
   const [loading, setLoading] = useState(false);
   const [message, setMessage] = useState("");
+  const navigate = useNavigate();
 
+  // Register customer
   const handleSubmit = async (e) => {
     e.preventDefault();
     setLoading(true);
 
+    // Accessing the form element to retrieve input values
     const signUpForm = e.target;
 
+    // Check if passwords match before proceeding
     if (signUpForm.password.value !== signUpForm.confirmPassword.value) {
       setMessage("Passwords do not match!");
       setLoading(false);
       return;
     }
 
+    // Structure the req body
     const formData = {
       surname: signUpForm.surname.value,
       othername: signUpForm.othername.value,
@@ -27,14 +32,21 @@ const SignUp = () => {
     };
 
     try {
+      // Send sign up request
       const res = await api.post("/auth/register/client", formData);
 
       // Redirect user to Home page after successful registration
-      navigate("/login");
+      navigate("/");
 
+      //   Reset form fields
       signUpForm.reset();
     } catch (err) {
-      setMessage(err.response.data.message);
+      // Display Errors
+      if (err.message === "Network Error") {
+        setMessage("Please check your network connection");
+      } else {
+        setMessage(err.response?.data?.message || "An error occurred");
+      }
     } finally {
       setLoading(false);
     }
@@ -52,38 +64,38 @@ const SignUp = () => {
             type="text"
             name="surname"
             placeholder="Surname"
-            className="w-full p-2 border border-border-800/20 dark:border-text-400 rounded-lg focus:outline-none focus:border-transparent focus:ring-2 focus:ring-primary-2"
+            className="w-full p-2 border border-border-800/20 dark:border-text-400 rounded-lg focus:outline-none focus:border-transparent focus:ring-2 focus:ring-primary-2 placeholder-gray-400 dark:placeholder-gray-500"
             required
           />
           <input
             type="text"
             name="othername"
             placeholder="Other Name"
-            className="w-full p-2 border border-border-800/20 dark:border-text-400 rounded-lg focus:outline-none focus:border-transparent focus:ring-2 focus:ring-primary-2"
+            className="w-full p-2 border border-border-800/20 dark:border-text-400 rounded-lg focus:outline-none focus:border-transparent focus:ring-2 focus:ring-primary-2 placeholder-gray-400 dark:placeholder-gray-500"
             required
           />
           <input
             type="email"
             name="email"
             placeholder="Email"
-            className="w-full p-2 border border-border-800/20 dark:border-text-400 rounded-lg focus:outline-none focus:border-transparent focus:ring-2 focus:ring-primary-2"
+            className="w-full p-2 border border-border-800/20 dark:border-text-400 rounded-lg focus:outline-none focus:border-transparent focus:ring-2 focus:ring-primary-2 placeholder-gray-400 dark:placeholder-gray-500"
             required
           />
           <input
             type="password"
             name="password"
             placeholder="Password"
-            className="w-full p-2 border border-border-800/20 dark:border-text-400 rounded-lg focus:outline-none focus:border-transparent focus:ring-2 focus:ring-primary-2"
+            className="w-full p-2 border border-border-800/20 dark:border-text-400 rounded-lg focus:outline-none focus:border-transparent focus:ring-2 focus:ring-primary-2 placeholder-gray-400 dark:placeholder-gray-500"
             required
           />
           <input
             type="password"
             name="confirmPassword"
             placeholder="Confirm Password"
-            className="w-full p-2 border border-border-800/20 dark:border-text-400 rounded-lg focus:outline-none focus:border-transparent focus:ring-2 focus:ring-primary-2"
+            className="w-full p-2 border border-border-800/20 dark:border-text-400 rounded-lg focus:outline-none focus:border-transparent focus:ring-2 focus:ring-primary-2 placeholder-gray-400 dark:placeholder-gray-500"
             required
           />
-          {message && <p className="text-sm text-rose-500">{message}</p>}
+          {message && <p className="text-sm text-rose-600">{message}</p>}
           <button
             type="submit"
             disabled={loading}
@@ -103,7 +115,7 @@ const SignUp = () => {
           Already have an account?{" "}
           <Link
             to={"/login"}
-            className="text-primary-2 dark:text-primary-11 font-medium hover:underline"
+            className="text-primary-3 dark:text-primary-11 font-medium hover:underline"
           >
             Login
           </Link>
