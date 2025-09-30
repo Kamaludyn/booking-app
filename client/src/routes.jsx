@@ -2,7 +2,7 @@ import { createBrowserRouter } from "react-router-dom";
 
 import RootLayout from "./service-provider/layouts/RootLayout";
 
-import Login from "./service-provider/pages/auth/Login";
+import Login from "./shared/pages/auth/Login";
 import SignUp from "./booking/pages/auth/SignUp";
 import BookingPage from "./booking/pages/BookingPage";
 import DashboardHome from "./service-provider/pages/dashboard/Home";
@@ -50,6 +50,7 @@ const router = createBrowserRouter([
         element: <ServiceListing />,
       },
       { path: "sign-up", element: <SignUp /> },
+      { path: "login", element: <Login /> },
       {
         path: "/booking/:id",
         element: <ServiceListingDetails />,
@@ -77,7 +78,6 @@ const router = createBrowserRouter([
         index: true,
         element: <DashboardHome />,
       },
-      { path: "login", element: <Login /> },
       {
         path: "appointments",
         element: <Appointments />,
