@@ -24,7 +24,7 @@ const register = asyncHandler(async (req, res) => {
   }
 
   // Check if user with provided email already exists
-  const userExists = await User.findOne({ email });
+  const userExists = await User.findOne({ email: email.toLowerCase() });
   if (userExists) {
     return res.status(409).json({
       success: false,
@@ -36,7 +36,7 @@ const register = asyncHandler(async (req, res) => {
   const user = await User.create({
     surname,
     othername,
-    email,
+    email: email.toLowerCase(),
     password,
     role,
   });
@@ -88,7 +88,9 @@ const login = asyncHandler(async (req, res) => {
   }
 
   // Find the user by email and explicitly include the password field
-  const user = await User.findOne({ email }).select("+password");
+  const user = await User.findOne({ email: email.toLowerCase() }).select(
+    "+password"
+  );
 
   // If user doesn't exist, return unauthorized error
   if (!user) {
