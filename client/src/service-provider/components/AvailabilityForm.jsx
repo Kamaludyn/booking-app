@@ -1,6 +1,7 @@
 import { useState } from "react";
 import TimePicker from "./TimePicker";
 import TimezoneSelect from "./TimezoneSelect";
+import { ThreeDot } from "react-loading-indicators";
 
 const weekdays = [
   "monday",
@@ -12,27 +13,27 @@ const weekdays = [
   "sunday",
 ];
 
+// Default availability structure
 const defaultAvailability = weekdays.reduce((acc, day) => {
-  acc[day] = { active: false, start: "09:00", end: "17:00", breaks: [] };
+  acc[day] = { isOpen: false, start: "09:00", end: "17:00", breaks: [] };
   return acc;
 }, {});
 
-export default function AvailabilityForm({ onSubmit }) {
+export default function AvailabilityForm({ onSubmit, loading }) {
   const [availability, setAvailability] = useState(defaultAvailability);
   const [timezone, setTimezone] = useState(
     Intl.DateTimeFormat().resolvedOptions().timeZone
   );
-  // const [timezone, setTimezone] = useState(
-  //   initialData.timezone || Intl.DateTimeFormat().resolvedOptions().timeZone
-  // );
 
+  // Toggle isOpen(active) status of a day
   const toggleDay = (day) => {
     setAvailability((prev) => ({
       ...prev,
-      [day]: { ...prev[day], active: !prev[day].active },
+      [day]: { ...prev[day], isOpen: !prev[day].isOpen },
     }));
   };
 
+  // Update time (start/end) of a day
   const updateTime = (day, field, value) => {
     setAvailability((prev) => ({
       ...prev,
@@ -40,6 +41,7 @@ export default function AvailabilityForm({ onSubmit }) {
     }));
   };
 
+  // Add a new break to a day
   const addBreak = (day) => {
     setAvailability((prev) => ({
       ...prev,
@@ -50,6 +52,7 @@ export default function AvailabilityForm({ onSubmit }) {
     }));
   };
 
+  // Update a break's start/end time
   const updateBreak = (day, index, field, value) => {
     const updatedBreaks = [...availability[day].breaks];
     updatedBreaks[index][field] = value;
@@ -59,6 +62,7 @@ export default function AvailabilityForm({ onSubmit }) {
     }));
   };
 
+  // Remove a break from a day
   const removeBreak = (day, index) => {
     const updatedBreaks = availability[day].breaks.filter(
       (_, i) => i !== index
@@ -69,6 +73,7 @@ export default function AvailabilityForm({ onSubmit }) {
     }));
   };
 
+  // Handle form submission
   const handleSubmit = (e) => {
     e.preventDefault();
     const payload = {
@@ -98,14 +103,14 @@ export default function AvailabilityForm({ onSubmit }) {
             <label className="flex items-center space-x-2">
               <input
                 type="checkbox"
-                checked={availability[day].active}
+                checked={availability[day].isOpen}
                 onChange={() => toggleDay(day)}
               />
               <span className="text-text-400">Available</span>
             </label>
           </div>
 
-          {availability[day].active && (
+          {availability[day].isOpen && (
             <div className="space-y-4">
               <div className="flex items-center space-x-4">
                 <TimePicker
@@ -113,14 +118,14 @@ export default function AvailabilityForm({ onSubmit }) {
                   name="start"
                   value={availability[day].start}
                   onChange={(value) => updateTime(day, "start", value)}
-                  disabled={!availability[day].active}
+                  disabled={!availability[day].isOpen}
                 />
                 <TimePicker
                   label="End"
                   name="end"
                   value={availability[day].end}
                   onChange={(value) => updateTime(day, "end", value)}
-                  disabled={!availability[day].active}
+                  disabled={!availability[day].isOpen}
                 />
               </div>
               {/* Breaks */}
@@ -135,14 +140,14 @@ export default function AvailabilityForm({ onSubmit }) {
                       onChange={(value) =>
                         updateBreak(day, idx, "start", value)
                       }
-                      disabled={!availability[day].active}
+                      disabled={!availability[day].isOpen}
                     />
                     <TimePicker
                       label="To"
                       name="to"
                       value={brk.end}
                       onChange={(value) => updateBreak(day, idx, "end", value)}
-                      disabled={!availability[day].active}
+                      disabled={!availability[day].isOpen}
                     />
                     <button
                       type="button"
@@ -169,9 +174,15 @@ export default function AvailabilityForm({ onSubmit }) {
       <div className="pt-4">
         <button
           type="submit"
-          className="bg-primary-500 hover:bg-primary-600 text-white px-6 py-2 rounded-xl"
+          className={`bg-primary-500 hover:bg-primary-600 text-white px-6 py-2 rounded-xl ${
+            loading && "cursor-not-allowed px-11.5"
+          }`}
         >
-          Save Availability
+          {loading ? (
+            <ThreeDot color="white" size="small" textColor="blue" />
+          ) : (
+            "Save Changes"
+          )}
         </button>
       </div>
     </form>

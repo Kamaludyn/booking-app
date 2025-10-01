@@ -1,36 +1,46 @@
 import { useState } from "react";
 import AvailabilityForm from "../../components/AvailabilityForm";
 import PageHeader from "../../components/PageHeader";
+import api from "../../../shared/services/api";
+import { toast } from "@acrool/react-toaster";
 
-const mockAvailability = {
-  Monday: {
-    available: true,
-    start: "09:00",
-    end: "17:00",
-    breakStart: "12:00",
-    breakEnd: "13:00",
-  },
-  Tuesday: { available: true, start: "09:00", end: "17:00" },
-  Wednesday: { available: false },
-  Thursday: { available: true, start: "10:00", end: "16:00" },
-  Friday: { available: true, start: "09:00", end: "15:00" },
-  Saturday: { available: false },
-  Sunday: { available: false },
-};
+export default function Availability() {
+  const [availability, setAvailability] = useState(null);
+  const [loading, setLoading] = useState(false);
 
-export default function Availabilit() {
-  const [availability, setAvailability] = useState(mockAvailability);
-  const [status, setStatus] = useState(null);
-
+  // Handle form submission
   const handleSubmit = async (updated) => {
+    setLoading(true);
+
+    // Transform the availability state into the format expected by the backend
+    const availabilityData = {
+      timezone: updated.timezone,
+      weeklyAvailability: Object.entries(updated.availability).map(
+        ([day, info]) => ({
+          day: day,
+          isOpen: info.isOpen,
+          workingHours: {
+            start: info.start,
+            end: info.end,
+          },
+          breaks: info.breaks.map((b) => ({
+            start: b.start,
+            end: b.end,
+          })),
+        })
+      ),
+    };
     try {
-      console.log("Saving availability:", updated);
-      setAvailability(updated);
-      setStatus("success");
-    } catch (error) {
-      setStatus("error");
+      const res = await api.put("/availability", availabilityData);
+      toast.success("Availability updated successfully!");
+    } catch (err) {
+      if (err.message === "Network Error") {
+        toast.error("Please check your network connection");
+      } else {
+        toast.error(err.response?.data?.message || "An error occurred");
+      }
     } finally {
-      setTimeout(() => setStatus(null), 3000);
+      setLoading(false);
     }
   };
 
@@ -38,18 +48,7 @@ export default function Availabilit() {
     <div className="space-y-6">
       <PageHeader title="Weekly Availability" />
 
-      <AvailabilityForm initialData={availability} onSubmit={handleSubmit} />
-
-      {status === "success" && (
-        <div className="mt-4 text-success-500 text-sm">
-          Availability updated successfully.
-        </div>
-      )}
-      {status === "error" && (
-        <div className="mt-4 text-danger-500 text-sm">
-          Something went wrong. Please try again.
-        </div>
-      )}
+      <AvailabilityForm onSubmit={handleSubmit} loading={loading} />
     </div>
   );
 }
