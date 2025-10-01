@@ -9,11 +9,8 @@ const router = express.Router();
 router.use(protect);
 router.use(vendorOnly);
 
-// @route  POST /api/v1/availability
-router.post("/", availabilityController.createAvailability);
-
-// @route  PATCH /api/v1/availability
-router.patch("/", availabilityController.updateAvailability);
+// @route  PUT /api/v1/availability
+router.put("/", availabilityController.saveAvailability);
 
 // @route  GET /api/v1/availability
 router.get("/", availabilityController.getAvailability);

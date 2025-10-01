@@ -1,57 +1,39 @@
 const Availability = require("./availability.model.js");
 const asyncHandler = require("express-async-handler");
 
-// @desc    Create Availability
-// @route   POST /api/v1/availability
+// @desc    Create or Update a vendor's availability
+// @route   PUT /api/v1/availability
 // @access  Private (Vendor)
-const createAvailability = asyncHandler(async (req, res) => {
-  const vendorId = req.user.userId;
-  const { timezone, weeklyAvailability } = req.body;
-
-  // Validate inputs
-  if (!timezone || !Array.isArray(weeklyAvailability)) {
-    return res.status(400).json({
-      success: false,
-      message: "Timezone, and weekly availability are required.",
-    });
-  }
-
-  // Find and Check if availability already exists for the vendor
-  const existing = await Availability.findOne({ vendorId });
-  if (existing) {
-    return res.status(400).json({
-      success: false,
-      message: "Availability already exists. Use the update endpoint.",
-    });
-  }
-
-  // Create a new availability document
-  const availability = await Availability.create({
-    vendorId,
-    timezone,
-    weeklyAvailability,
-  });
-
-  res.status(201).json({
-    success: true,
-    message: "Availability created successfully.",
-    availability,
-  });
-});
-
-// @desc    Update a vendor's availability partially (day by day)
-// @route   PATCH /api/v1/availability
-// @access  Private (Vendor)
-const updateAvailability = asyncHandler(async (req, res) => {
+const saveAvailability = asyncHandler(async (req, res) => {
   const vendorId = req.user.userId;
   const { timezone, weeklyAvailability } = req.body;
 
   // Find the vendor's availability document
   const availability = await Availability.findOne({ vendorId });
+
   if (!availability) {
-    return res.status(404).json({
-      success: false,
-      message: "No availability found to update.",
+    // If not found
+
+    // Validate inputs
+    if (!timezone || !Array.isArray(weeklyAvailability)) {
+      return res.status(400).json({
+        success: false,
+        message:
+          "Timezone and day(s) availabile are required to create availability.",
+      });
+    }
+
+    // Create a new availability document
+    availability = await Availability.create({
+      vendorId,
+      timezone,
+      weeklyAvailability,
+    });
+
+    return res.status(201).json({
+      success: true,
+      message: "Availability created successfully.",
+      availability,
     });
   }
 
@@ -117,7 +99,6 @@ const getAvailability = asyncHandler(async (req, res) => {
 });
 
 module.exports = {
-  createAvailability,
+  saveAvailability,
   getAvailability,
-  updateAvailability,
 };
