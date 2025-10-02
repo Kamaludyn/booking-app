@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import TimePicker from "./TimePicker";
 import TimezoneSelect from "./TimezoneSelect";
 import { ThreeDot } from "react-loading-indicators";
@@ -15,15 +15,19 @@ const weekdays = [
 
 // Default availability structure
 const defaultAvailability = weekdays.reduce((acc, day) => {
-  acc[day] = { isOpen: false, start: "09:00", end: "17:00", breaks: [] };
+  acc[day] = { isOpen: false, start: "", end: "", breaks: [] };
   return acc;
 }, {});
 
-export default function AvailabilityForm({ onSubmit, loading }) {
+export default function AvailabilityForm({ initialData, onSubmit, loading }) {
   const [availability, setAvailability] = useState(defaultAvailability);
-  const [timezone, setTimezone] = useState(
-    Intl.DateTimeFormat().resolvedOptions().timeZone
-  );
+  const [timezone, setTimezone] = useState("");
+
+  // initialize availability and timezone
+  useEffect(() => {
+    if (initialData.availability) setAvailability(initialData.availability);
+    if (initialData.timezone) setTimezone(initialData.timezone);
+  }, [initialData]);
 
   // Toggle isOpen(active) status of a day
   const toggleDay = (day) => {
@@ -47,7 +51,7 @@ export default function AvailabilityForm({ onSubmit, loading }) {
       ...prev,
       [day]: {
         ...prev[day],
-        breaks: [...prev[day].breaks, { start: "12:00", end: "13:00" }],
+        breaks: [...prev[day].breaks, { start: "", end: "" }],
       },
     }));
   };
@@ -103,10 +107,13 @@ export default function AvailabilityForm({ onSubmit, loading }) {
             <label className="flex items-center space-x-2">
               <input
                 type="checkbox"
+                className="cursor-pointer"
                 checked={availability[day].isOpen}
                 onChange={() => toggleDay(day)}
               />
-              <span className="text-text-400">Available</span>
+              <span className="text-text-400">
+                {availability[day].isOpen ? "Available" : "Unavailable"}
+              </span>
             </label>
           </div>
 
