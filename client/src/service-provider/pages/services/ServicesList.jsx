@@ -11,7 +11,7 @@ export default function ServicesList() {
   const navigate = useNavigate();
 
   const filteredServices = services.filter((service) =>
-    service.name.toLowerCase().includes(search.toLowerCase())
+    service?.name?.toLowerCase().includes(search.toLowerCase())
   );
 
   return (
@@ -32,7 +32,7 @@ export default function ServicesList() {
           placeholder="Search services..."
           value={search}
           onChange={(e) => setSearch(e.target.value)}
-          className="w-full pl-10 pr-4 py-2 rounded-lg bg-surface-500 dark:bg-surface-800 border border-border-500 dark:border-border-800 text-text-500 dark:text-white text-sm focus:ring-2 focus:ring-primary-500 focus:border-transparent shadow-sm hover:shadow-md"
+          className="w-full pl-10 pr-4 py-2 rounded-lg bg-surface-500 dark:bg-surface-800 border border-border-500 dark:border-border-800 text-text-500 dark:text-white text-sm focus:ring-2 focus:ring-primary-500 dark:focus:ring-white focus:border-transparent outline-0 shadow-sm hover:shadow-md"
         />
       </div>
 

@@ -1,15 +1,21 @@
 import { useNavigate } from "react-router-dom";
 import { useState } from "react";
 import { ChevronLeft } from "lucide-react";
+import api from "../../../shared/services/api";
+import { toast } from "@acrool/react-toaster";
+import { ThreeDot } from "react-loading-indicators";
 
 export default function CreateServicePage() {
   const navigate = useNavigate();
+  const [loading, setLoading] = useState(false);
   const [formData, setFormData] = useState({
     name: "",
     description: "",
     duration: "",
+    bufferTime: "",
     price: "",
     requireDeposit: false,
+    depositAmount: "",
   });
 
   const handleChange = (e) => {
@@ -20,17 +26,38 @@ export default function CreateServicePage() {
     }));
   };
 
-  const handleSubmit = (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault();
+    setLoading(true);
 
-    const newService = {
-      ...formData,
-      id: crypto.randomUUID(),
+    // Formatting data before submition
+    const serviceData = {
+      name: formData.name,
+      description: formData.description,
+      price: parseInt(formData.price),
+      requireDeposit: true,
+      depositAmount: parseInt(formData.depositAmount),
       duration: parseInt(formData.duration),
-      price: parseFloat(formData.price),
+      bufferTime: parseInt(formData.bufferTime),
+      currency: import.meta.env.VITE_CURRENCY,
     };
 
-    navigate("/dashboard/services");
+    try {
+      const res = await api.post("/services", serviceData);
+      console.log("serv res:", res.data);
+      //  setServices()
+      toast.success(res.data.message);
+      navigate("/dashboard/services");
+    } catch (err) {
+      console.log("service error", err);
+      if (err.message === "Network Error") {
+        toast.error("Please check your network connection");
+      } else {
+        toast.error(err.response?.data?.message || "An error occurred");
+      }
+    } finally {
+      setLoading(false);
+    }
   };
 
   return (
@@ -52,7 +79,7 @@ export default function CreateServicePage() {
         className="space-y-4 bg-surface-500 dark:bg-surface-800 p-6 rounded-xl border border-border-500 dark:border-border-800 shadow-sm"
       >
         <div>
-          <label className="block text-sm text-text-400 mb-1">
+          <label className="block text-sm text-text-400 dark:text-text-700 mb-1">
             Service Name
           </label>
           <input
@@ -61,26 +88,27 @@ export default function CreateServicePage() {
             required
             value={formData.name}
             onChange={handleChange}
-            className="w-full rounded-lg border border-border-500 dark:border-border-800 bg-transparent px-3 py-2 text-text-500 dark:text-white"
+            className="w-full rounded-lg border border-border-500 dark:border-text-700/50 bg-background-800/5 dark:bg-transparent px-3 py-2 text-text-500 dark:text-white focus:ring focus:ring-primary-500 dark:focus:ring-white focus:border-transparent outline-0"
           />
         </div>
 
         <div>
-          <label className="block text-sm text-text-400 mb-1">
+          <label className="block text-sm text-text-400 dark:text-text-700 mb-1">
             Description
           </label>
           <textarea
             name="description"
-            rows="3"
+            rows="2"
+            required
             value={formData.description}
             onChange={handleChange}
-            className="w-full rounded-lg border border-border-500 dark:border-border-800 bg-transparent px-3 py-2 text-text-500 dark:text-white"
+            className="w-full rounded-lg border border-border-500 dark:border-text-700/50 bg-background-800/5 dark:bg-transparent px-3 py-2 text-text-500 dark:text-white focus:ring focus:ring-primary-500 dark:focus:ring-white focus:border-transparent outline-0"
           />
         </div>
 
         <div className="grid grid-cols-2 gap-4">
           <div>
-            <label className="block text-sm text-text-400 mb-1">
+            <label className="block text-sm text-text-400 dark:text-text-700 mb-1">
               Duration (minutes)
             </label>
             <input
@@ -90,24 +118,37 @@ export default function CreateServicePage() {
               required
               value={formData.duration}
               onChange={handleChange}
-              className="w-full rounded-lg border border-border-500 dark:border-border-800 bg-transparent px-3 py-2 text-text-500 dark:text-white"
+              placeholder="eg. 90 for 1hr 30mins"
+              className="w-full rounded-lg border border-border-500 dark:border-text-700/50 bg-background-800/5 dark:bg-transparent px-3 py-2 text-text-500 dark:text-white focus:ring focus:ring-primary-500 dark:focus:ring-white focus:border-transparent outline-0"
             />
           </div>
-
           <div>
-            <label className="block text-sm text-text-400 mb-1">
-              Price ($)
+            <label className="block text-sm text-text-400 dark:text-text-700 mb-1">
+              Buffer Time (minutes)
             </label>
             <input
               type="number"
-              name="price"
-              step="0.01"
-              required
-              value={formData.price}
+              name="bufferTime"
+              value={formData.bufferTime}
               onChange={handleChange}
-              className="w-full rounded-lg border border-border-500 dark:border-border-800 bg-transparent px-3 py-2 text-text-500 dark:text-white"
+              placeholder="eg. 90 for 1hr 30mins"
+              className="w-full rounded-lg border border-border-500 dark:border-text-700/50 bg-background-800/5 dark:bg-transparent px-3 py-2 text-text-500 dark:text-white focus:ring focus:ring-primary-500 dark:focus:ring-white focus:border-transparent outline-0"
             />
           </div>
+        </div>
+        <div>
+          <label className="block text-sm text-text-400 dark:text-text-700 mb-1">
+            Price ($)
+          </label>
+          <input
+            type="number"
+            name="price"
+            step="0.01"
+            required
+            value={formData.price}
+            onChange={handleChange}
+            className="w-1/2 rounded-lg border border-border-500 dark:border-text-700/50 bg-background-800/5 dark:bg-transparent px-3 py-2 text-text-500 dark:text-white focus:ring focus:ring-primary-500 dark:focus:ring-white focus:border-transparent outline-0"
+          />
         </div>
 
         <div className="flex items-center space-x-2 pt-2">
@@ -126,13 +167,35 @@ export default function CreateServicePage() {
             Require deposit to book
           </label>
         </div>
+        {formData.requireDeposit && (
+          <div>
+            <label className="block text-sm text-text-400 dark:text-text-700 mb-1">
+              Deposit Amount (25% default)
+            </label>
+            <input
+              type="number"
+              name="depositAmount"
+              step="0.01"
+              required
+              value={formData.depositAmount}
+              onChange={handleChange}
+              className="w-1/2 rounded-lg border border-border-500 dark:border-text-700/50 bg-background-800/5 dark:bg-transparent px-3 py-2 text-text-500 dark:text-white focus:ring focus:ring-primary-500 dark:focus:ring-white focus:border-transparent outline-0"
+            />
+          </div>
+        )}
 
         <div className="flex justify-end pt-4">
           <button
             type="submit"
-            className="bg-primary-500 dark:bg-primary-500/50 text-white px-5 py-2 rounded-lg hover:opacity-90 cursor-pointer"
+            className={`bg-primary-500 dark:bg-primary-500/50 text-white px-5 py-2 rounded-lg hover:opacity-90 cursor-pointer ${
+              loading && "cursor-not-allowed px-11.5"
+            }`}
           >
-            Save Service
+            {loading ? (
+              <ThreeDot color="white" size="small" textColor="blue" />
+            ) : (
+              "Save Changes"
+            )}
           </button>
         </div>
       </form>

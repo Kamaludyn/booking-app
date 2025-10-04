@@ -1,3 +1,7 @@
+import { useState, useEffect } from "react";
+import api from "../../shared/services/api";
+import { toast } from "@acrool/react-toaster";
+
 const mockServices = [
   {
     id: "1",
@@ -34,7 +38,26 @@ const mockServices = [
 ];
 
 export function useServices() {
-  return mockServices;
+  const [services, setServices] = useState(mockServices);
+
+  useEffect(() => {
+    // Fetch services from the backend when the component mounts
+    const fetchServices = async () => {
+      try {
+        const res = await api.get("/services");
+        setServices(res?.data.services);
+      } catch (err) {
+        if (err.message === "Network Error") {
+          toast.error("Please check your network connection");
+        } else {
+          toast.error(err.response?.data?.message || "An error occurred");
+        }
+      }
+    };
+    fetchServices();
+  }, []);
+
+  return services;
 }
 
 export function useService(id) {
