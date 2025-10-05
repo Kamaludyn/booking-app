@@ -35,6 +35,7 @@ import AccountSettings from "./booking/pages/AccountSettings";
 import NotificationsSettings from "./service-provider/pages/notifications/NotificationsSettings";
 import SecuritySettings from "./service-provider/pages/settings/SecuritySettings";
 import CalenderIntegration from "./service-provider/pages/settings/CalenderIntegration";
+import NotFound from "./shared/pages/NotFound";
 
 const router = createBrowserRouter([
   {
@@ -171,6 +172,10 @@ const router = createBrowserRouter([
         element: <PaymentSetup />,
       },
     ],
+  },
+  {
+    path: "*",
+    element: <NotFound />,
   },
 ]);
 
