@@ -1,5 +1,6 @@
-import { useParams, useNavigate } from "react-router-dom";
-import { useService } from "../../hooks/UseServices";
+import { useState, useEffect } from "react";
+import { useParams, useNavigate, useLocation } from "react-router-dom";
+import api from "../../../shared/services/api";
 import {
   ChevronLeft,
   Clock,
@@ -12,20 +13,32 @@ import {
 export default function ServiceDetail() {
   const { id } = useParams();
   const navigate = useNavigate();
-  const service = useService(id);
+  const location = useLocation();
+  const [service, setService] = useState(null);
 
-  if (!service) {
-    return (
-      <div className="text-center py-8 text-text-400 dark:text-text-600">
-        Service not found
-      </div>
-    );
-  }
+  useEffect(() => {
+    // Function to fetch service details
+    const fetchService = async () => {
+      try {
+        const res = await api.get(`/services/${id}`);
+        setService(res.data.service);
+      } catch (err) {
+        console.error("Error fetching service");
+      }
+    };
+
+    // If navigated from ServicesList, use state; otherwise, fetch from backend
+    if (!location.state) {
+      fetchService();
+    } else {
+      const { service } = location.state;
+      setService(service);
+    }
+  }, []);
 
   return (
     <section>
       <div className="max-w-2xl mx-auto">
-
         <div className="flex items-center gap-4 mb-4">
           <button
             onClick={() => navigate(-1)}
@@ -41,11 +54,11 @@ export default function ServiceDetail() {
         <div className="bg-surface-500 dark:bg-surface-800 rounded-lg border border-border-500 dark:border-border-800 overflow-hidden shadow-sm hover:shadow-md">
           <div className="p-6 border-b border-border-500 dark:border-border-800">
             <h2 className="text-xl font-semibold text-text-500 dark:text-white">
-              {service.name}
+              {service?.name}
             </h2>
-            {service.description && (
+            {service?.description && (
               <p className="text-sm text-text-400 dark:text-text-600 mt-2">
-                {service.description}
+                {service?.description}
               </p>
             )}
           </div>
@@ -60,7 +73,7 @@ export default function ServiceDetail() {
                   />
                 }
                 label="Duration"
-                value={`${service.duration} minutes`}
+                value={`${service?.duration} minutes`}
               />
               <DetailCard
                 icon={
@@ -70,18 +83,18 @@ export default function ServiceDetail() {
                   />
                 }
                 label="Price"
-                value={`$${service.price.toFixed(2)}`}
+                value={`$${service?.price.toFixed(2)}`}
               />
               <DetailCard
                 icon={
-                  service.requireDeposit ? (
+                  service?.requireDeposit ? (
                     <Check size={16} className="text-success-500" />
                   ) : (
                     <X size={16} className="text-danger-500" />
                   )
                 }
                 label="Requires Deposit"
-                value={service.requireDeposit ? "Yes" : "No"}
+                value={service?.requireDeposit ? "Yes" : "No"}
               />
               <DetailCard
                 icon={
@@ -91,17 +104,17 @@ export default function ServiceDetail() {
                   />
                 }
                 label="Category"
-                value={service.category || "General"}
+                value={service?.category || "General"}
               />
             </div>
 
-            {service.notes && (
+            {service?.notes && (
               <div>
                 <h3 className="font-medium text-text-500 dark:text-white mb-2">
                   Service Notes
                 </h3>
                 <p className="text-sm text-text-400 dark:text-text-600 bg-surface-600 dark:bg-surface-700 p-3 rounded-lg">
-                  {service.notes}
+                  {service?.notes}
                 </p>
               </div>
             )}
@@ -109,7 +122,7 @@ export default function ServiceDetail() {
 
           <div className="p-4 border-t border-border-500 dark:border-border-800 flex justify-end gap-3">
             <button
-              onClick={() => navigate(`/services/${service.id}/edit`)}
+              onClick={() => navigate(`/services/${service?._id}/edit`)}
               className="px-4 py-2 rounded-lg border border-border-500 dark:border-border-800 text-text-500 dark:text-white hover:opacity-80 cursor-pointer"
             >
               Edit Service
