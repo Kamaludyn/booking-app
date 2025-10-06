@@ -1,11 +1,13 @@
 import { useNavigate } from "react-router-dom";
 import { useState } from "react";
-import { ChevronLeft } from "lucide-react";
+import { useQueryClient } from "@tanstack/react-query";
 import api from "../../../shared/services/api";
+import { ChevronLeft } from "lucide-react";
 import { toast } from "@acrool/react-toaster";
 import { ThreeDot } from "react-loading-indicators";
 
 export default function CreateServicePage() {
+  const queryClient = useQueryClient();
   const navigate = useNavigate();
   const [loading, setLoading] = useState(false);
   const [formData, setFormData] = useState({
@@ -30,7 +32,7 @@ export default function CreateServicePage() {
     e.preventDefault();
     setLoading(true);
 
-    // Formatting data before submition
+    // Prepare service data before sending to backend
     const serviceData = {
       name: formData.name,
       description: formData.description,
@@ -44,12 +46,10 @@ export default function CreateServicePage() {
 
     try {
       const res = await api.post("/services", serviceData);
-      console.log("serv res:", res.data);
-      //  setServices()
       toast.success(res.data.message);
+      queryClient.invalidateQueries(["services"]); // refresh the service list
       navigate("/dashboard/services");
     } catch (err) {
-      console.log("service error", err);
       if (err.message === "Network Error") {
         toast.error("Please check your network connection");
       } else {

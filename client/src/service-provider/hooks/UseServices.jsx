@@ -1,65 +1,13 @@
-import { useState, useEffect } from "react";
+import { useQuery } from "@tanstack/react-query";
 import api from "../../shared/services/api";
-import { toast } from "@acrool/react-toaster";
-
-const mockServices = [
-  {
-    id: "1",
-    name: "1-Hour Coaching Call",
-    description: "A private 1-on-1 coaching session.",
-    duration: 60,
-    requireDeposit: true,
-    price: 120,
-  },
-  {
-    id: "2",
-    name: "30-Minute Haircut",
-    description: "Quick and clean haircut appointment.",
-    duration: 30,
-    requireDeposit: true,
-    price: 40,
-  },
-  {
-    id: "3",
-    name: "Free Initial Consultation",
-    description: "Discuss your needs and goals.",
-    duration: 20,
-    requireDeposit: false,
-    price: 0,
-  },
-  {
-    id: "4",
-    name: "Yoga Session",
-    description: "1-hour private yoga session.",
-    duration: 60,
-    requireDeposit: true,
-    price: 80,
-  },
-];
 
 export function useServices() {
-  const [services, setServices] = useState(mockServices);
-
-  useEffect(() => {
-    // Fetch services from the backend when the component mounts
-    const fetchServices = async () => {
-      try {
-        const res = await api.get("/services");
-        setServices(res?.data.services);
-      } catch (err) {
-        if (err.message === "Network Error") {
-          toast.error("Please check your network connection");
-        } else {
-          toast.error(err.response?.data?.message || "An error occurred");
-        }
-      }
-    };
-    fetchServices();
-  }, []);
-
-  return services;
-}
-
-export function useService(id) {
-  return mockServices.find((service) => service.id === id);
+  // Fetch services from backend with react-query
+  return useQuery({
+    queryKey: ["services"], // cache key
+    queryFn: async () => {
+      const res = await api.get("/services");
+      return res.data?.services || [];
+    },
+  });
 }

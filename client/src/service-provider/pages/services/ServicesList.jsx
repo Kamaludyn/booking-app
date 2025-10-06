@@ -6,11 +6,10 @@ import PageHeader from "../../components/PageHeader";
 
 export default function ServicesList() {
   const [search, setSearch] = useState("");
-  const [loading, setLoading] = useState(false);
-  const services = useServices();
+  const { data: services, isLoading, isError } = useServices();
   const navigate = useNavigate();
 
-  const filteredServices = services.filter((service) =>
+  const filteredServices = services?.filter((service) =>
     service?.name?.toLowerCase().includes(search.toLowerCase())
   );
 
@@ -18,7 +17,7 @@ export default function ServicesList() {
     <div className="space-y-6">
       <PageHeader
         title="Services"
-        subtitle={`${filteredServices.length} clients found`}
+        subtitle={`${filteredServices?.length || 0} services found`}
         actionLabel="New Service"
         onActionClick={() => navigate("/dashboard/services/new")}
         actionIcon={Plus}
@@ -36,11 +35,11 @@ export default function ServicesList() {
         />
       </div>
 
-      {loading ? (
+      {isLoading ? (
         <div className="text-center py-8 text-text-400 dark:text-text-600 shadow-sm">
           Loading services...
         </div>
-      ) : filteredServices.length === 0 ? (
+      ) : isError ? (
         <div className="text-center py-8 bg-surface-500 dark:bg-surface-800 rounded-lg">
           <p className="text-text-400 dark:text-text-600">No services found</p>
           {search && (
@@ -54,15 +53,19 @@ export default function ServicesList() {
         </div>
       ) : (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-          {filteredServices.map((service) => (
+          {filteredServices?.map((service) => (
             <div
-              key={service.id}
+              key={service._id}
               className="flex flex-col p-4 rounded-lg bg-surface-500 dark:bg-surface-800 border border-border-500 dark:border-border-800  shadow-sm hover:shadow-md transition-shadow"
             >
               <div className="flex justify-between items-start">
                 <h3
                   className="font-medium text-text-500 dark:text-white hover:underline cursor-pointer"
-                  onClick={() => navigate(`/dashboard/services/${service.id}`)}
+                  onClick={() =>
+                    navigate(`/dashboard/services/${service._id}`, {
+                      state: { service },
+                    })
+                  }
                 >
                   {service.name}
                 </h3>
@@ -96,14 +99,14 @@ export default function ServicesList() {
               <div className="flex gap-2 mt-auto text-white">
                 <button
                   onClick={() =>
-                    navigate(`/dashboard/services/${service.id}/edit`)
+                    navigate(`/dashboard/services/${service._id}/edit`)
                   }
                   className="flex-1 py-2 text-sm rounded-lg bg-primary-500 hover:bg-primary-600 dark:bg-primary-500/60 dark:hover:bg-primary-500/70 cursor-pointer"
                 >
                   Edit
                 </button>
                 <button
-                  onClick={() => handleDelete(service.id)}
+                  onClick={() => handleDelete(service._id)}
                   className="flex-1 py-2 text-sm rounded-lg bg-danger-500 hover:bg-danger-800 text-white cursor-pointer"
                 >
                   Delete
@@ -115,15 +118,4 @@ export default function ServicesList() {
       )}
     </div>
   );
-
-  async function handleDelete(id) {
-    if (!confirm("Are you sure you want to delete this service?")) return;
-    try {
-      setLoading(true);
-      setLoading(false);
-    } catch (error) {
-      console.error("Failed to delete service:");
-      setLoading(false);
-    }
-  }
 }
