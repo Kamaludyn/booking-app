@@ -34,7 +34,7 @@ const createService = asyncHandler(async (req, res) => {
     price,
     isActive,
     requireDeposit,
-    depositAmount,
+    depositAmount: requireDeposit ? (25 / 100) * price : depositAmount,
     currency,
   });
 

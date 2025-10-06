@@ -42,7 +42,7 @@ const serviceSchema = new mongoose.Schema(
     },
     bufferTime: {
       type: Number,
-      default: 10,
+      default: 0,
     },
   },
   { timeStamps: true }
