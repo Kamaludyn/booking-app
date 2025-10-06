@@ -99,7 +99,9 @@ export default function ServicesList() {
               <div className="flex gap-2 mt-auto text-white">
                 <button
                   onClick={() =>
-                    navigate(`/dashboard/services/${service._id}/edit`)
+                    navigate(`/dashboard/services/${service._id}/edit`, {
+                      state: { service },
+                    })
                   }
                   className="flex-1 py-2 text-sm rounded-lg bg-primary-500 hover:bg-primary-600 dark:bg-primary-500/60 dark:hover:bg-primary-500/70 cursor-pointer"
                 >

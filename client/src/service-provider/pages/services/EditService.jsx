@@ -1,39 +1,61 @@
-import { useParams, useNavigate } from "react-router-dom";
+import { useParams, useLocation } from "react-router-dom";
 import { useEffect, useState } from "react";
-import ServiceForm from "../../components/services/ServiceForm";
-import { mockServices } from "../../mock/services";
+import { toast } from "@acrool/react-toaster";
+import api from "../../../shared/services/api";
+import ServiceForm from "./AddService";
 
-export default function EditServicePage() {
+export default function EditService() {
   const { id } = useParams();
-  const navigate = useNavigate();
+  const location = useLocation();
   const [service, setService] = useState(null);
+  const [loading, setLoading] = useState(false);
 
   useEffect(() => {
-    const selected = mockServices.find((s) => s.id === id);
-    setService(selected);
-  }, [id]);
+    // Function to fetch service details
+    const fetchService = async () => {
+      setLoading(true);
+      try {
+        const res = await api.get(`/services/${id}`);
+        setService(res.data.service);
+      } catch (err) {
+        const message =
+          err.message === "Network Error"
+            ? "Please check your network connection"
+            : err.response?.data?.message || "An error occurred";
+        toast.error(message);
+      } finally {
+        setLoading(false);
+      }
+    };
 
-  const handleUpdate = (updatedData) => {
-    console.log("Updated service:", updatedData);
-    navigate("/dashboard/services");
-  };
+    // If navigated from ServicesList, use state; otherwise, fetch from backend
+    if (!location.state) {
+      fetchService();
+    } else {
+      const { service } = location.state;
+      setService(service);
+      setLoading(false);
+    }
+  }, []);
 
+  if (loading) {
+    return (
+      <div className="text-center py-8 text-text-400 dark:text-text-600 shadow-md">
+        Loading service details...
+      </div>
+    );
+  }
   if (!service) {
     return (
-      <div className="text-center text-text-400 p-6">Service not found.</div>
+      <div className="text-center py-8 text-text-400 dark:text-text-600 shadow-md">
+        Service not found
+      </div>
     );
   }
 
   return (
     <div className="max-w-xl mx-auto">
-      <h1 className="text-2xl font-semibold text-text-500 mb-4">
-        Edit Service
-      </h1>
-      <ServiceForm
-        initialData={service}
-        onSubmit={handleUpdate}
-        isEditing={true}
-      />
+      <ServiceForm selectedService={service} />
     </div>
   );
 }

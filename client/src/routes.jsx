@@ -16,6 +16,7 @@ import ClientDetails from "./service-provider/pages/clients/ClientDetail";
 import ServicesList from "./service-provider/pages/services/ServicesList";
 import AddService from "./service-provider/pages/services/AddService";
 import ServiceDetail from "./service-provider/pages/services/ServiceDetail";
+import EditService from "./service-provider/pages/services/EditService";
 import Availability from "./service-provider/pages/availability/Availability";
 import BusinessProfile from "./service-provider/pages/Profile/BusinessProfile";
 import BusinessSettings from "./service-provider/pages/settings/BusinessSettings";
@@ -114,6 +115,10 @@ const router = createBrowserRouter([
       {
         path: "services/new",
         element: <AddService />,
+      },
+      {
+        path: "services/:id/edit",
+        element: <EditService />,
       },
       {
         path: "services/:id",

@@ -1,12 +1,12 @@
 import { useNavigate } from "react-router-dom";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useQueryClient } from "@tanstack/react-query";
 import api from "../../../shared/services/api";
 import { ChevronLeft } from "lucide-react";
 import { toast } from "@acrool/react-toaster";
 import { ThreeDot } from "react-loading-indicators";
 
-export default function CreateServicePage() {
+export default function CreateServicePage({ selectedService }) {
   const queryClient = useQueryClient();
   const navigate = useNavigate();
   const [loading, setLoading] = useState(false);
@@ -19,6 +19,20 @@ export default function CreateServicePage() {
     requireDeposit: false,
     depositAmount: "",
   });
+
+  useEffect(() => {
+    if (selectedService) {
+      setFormData({
+        name: selectedService.name || "",
+        description: selectedService.description || "",
+        duration: selectedService.duration || "",
+        price: selectedService.price || "",
+        bufferTime: selectedService.bufferTime || "",
+        requireDeposit: selectedService.requireDeposit || false,
+        depositAmount: selectedService.depositAmount || "",
+      });
+    }
+  }, [selectedService]);
 
   const handleChange = (e) => {
     const { name, type, value, checked } = e.target;
@@ -44,12 +58,42 @@ export default function CreateServicePage() {
       currency: import.meta.env.VITE_CURRENCY,
     };
 
+    const fieldsToCompare = [
+      "name",
+      "description",
+      "price",
+      "duration",
+      "bufferTime",
+      "requireDeposit",
+      "depositAmount",
+    ];
+
+    const hasChanges = fieldsToCompare.some(
+      (field) => selectedService?.[field] !== serviceData[field]
+    );
+
     try {
-      const res = await api.post("/services", serviceData);
-      toast.success(res.data.message);
+      if (selectedService) {
+        if (!hasChanges) {
+          toast.error("No changes made");
+          setLoading(false);
+          return;
+        }
+
+        const res = await api.patch(
+          `/services/${selectedService._id}`,
+          serviceData
+        );
+        console.log("edit res:", res.data);
+      } else {
+        console.log("create:", serviceData);
+        const res = await api.post("/services", serviceData);
+        toast.success(res.data.message);
+      }
       queryClient.invalidateQueries(["services"]); // refresh the service list
       navigate("/dashboard/services");
     } catch (err) {
+      console.log("error:", err);
       if (err.message === "Network Error") {
         toast.error("Please check your network connection");
       } else {
@@ -70,7 +114,7 @@ export default function CreateServicePage() {
           <ChevronLeft size={20} />
         </button>
         <h1 className="text-2xl font-semibold text-text-500 dark:text-white">
-          Add New Sevice
+          {selectedService ? "Edit Service" : "Add New Service"}
         </h1>
       </div>
 
@@ -176,7 +220,6 @@ export default function CreateServicePage() {
               type="number"
               name="depositAmount"
               step="0.01"
-              required
               value={formData.depositAmount}
               onChange={handleChange}
               className="w-1/2 rounded-lg border border-border-500 dark:border-text-700/50 bg-background-800/5 dark:bg-transparent px-3 py-2 text-text-500 dark:text-white focus:ring focus:ring-primary-500 dark:focus:ring-white focus:border-transparent outline-0"
