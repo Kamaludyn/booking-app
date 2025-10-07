@@ -120,7 +120,11 @@ export default function ServiceDetail() {
 
           <div className="p-4 border-t border-border-500 dark:border-border-800 flex justify-end gap-3">
             <button
-              onClick={() => navigate(`/services/${service?._id}/edit`)}
+              onClick={() =>
+                navigate(`/dashboard/services/${service?._id}/edit`, {
+                  state: { service },
+                })
+              }
               className="px-4 py-2 rounded-lg border border-border-500 dark:border-border-800 text-text-500 dark:text-white hover:opacity-80 cursor-pointer"
             >
               Edit Service
