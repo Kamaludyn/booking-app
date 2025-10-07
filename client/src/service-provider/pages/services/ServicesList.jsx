@@ -104,12 +104,12 @@ export default function ServicesList() {
               </div>
 
               {service.description && (
-                <p className="text-sm text-text-400 dark:text-text-600 mt-2">
+                <p className="h-full text-sm text-text-400 dark:text-text-600 mt-2">
                   {service.description}
                 </p>
               )}
 
-              <div className="flex items-center justify-between my-4">
+              <div className="flex items-center justify-between my-2">
                 <div className="flex items-center gap-2 text-sm text-text-500 dark:text-white">
                   <Clock size={14} className="text-text-400 dark:text-white" />
                   <span>{service.duration} min</span>
