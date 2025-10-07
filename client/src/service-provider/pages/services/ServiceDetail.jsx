@@ -5,9 +5,10 @@ import {
   ChevronLeft,
   Clock,
   DollarSign,
-  Calendar,
+  Timer,
   Check,
   X,
+  PiggyBank,
 } from "lucide-react";
 
 export default function ServiceDetail() {
@@ -19,12 +20,8 @@ export default function ServiceDetail() {
   useEffect(() => {
     // Function to fetch service details
     const fetchService = async () => {
-      try {
-        const res = await api.get(`/services/${id}`);
-        setService(res.data.service);
-      } catch (err) {
-        console.error("Error fetching service");
-      }
+      const res = await api.get(`/services/${id}`);
+      setService(res.data.service);
     };
 
     // If navigated from ServicesList, use state; otherwise, fetch from backend
@@ -77,6 +74,16 @@ export default function ServiceDetail() {
               />
               <DetailCard
                 icon={
+                  <Timer
+                    size={16}
+                    className="text-text-400 dark:text-text-600"
+                  />
+                }
+                label="Buffer Time"
+                value={`${service?.bufferTime || 0} minutes`}
+              />
+              <DetailCard
+                icon={
                   <DollarSign
                     size={16}
                     className="text-text-400 dark:text-text-600"
@@ -96,28 +103,19 @@ export default function ServiceDetail() {
                 label="Requires Deposit"
                 value={service?.requireDeposit ? "Yes" : "No"}
               />
-              <DetailCard
-                icon={
-                  <Calendar
-                    size={16}
-                    className="text-text-400 dark:text-text-600"
-                  />
-                }
-                label="Category"
-                value={service?.category || "General"}
-              />
+              {service?.requireDeposit && (
+                <DetailCard
+                  icon={
+                    <PiggyBank
+                      size={16}
+                      className="text-text-400 dark:text-text-600"
+                    />
+                  }
+                  label="Deposit Amount"
+                  value={`$${service?.depositAmount?.toFixed(2) || 0}`}
+                />
+              )}
             </div>
-
-            {service?.notes && (
-              <div>
-                <h3 className="font-medium text-text-500 dark:text-white mb-2">
-                  Service Notes
-                </h3>
-                <p className="text-sm text-text-400 dark:text-text-600 bg-surface-600 dark:bg-surface-700 p-3 rounded-lg">
-                  {service?.notes}
-                </p>
-              </div>
-            )}
           </div>
 
           <div className="p-4 border-t border-border-500 dark:border-border-800 flex justify-end gap-3">

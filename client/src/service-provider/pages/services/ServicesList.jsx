@@ -1,17 +1,44 @@
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
+import { useQueryClient } from "@tanstack/react-query";
 import { useServices } from "../../hooks/UseServices";
 import { Search, Plus, Clock, DollarSign } from "lucide-react";
+import { toast } from "@acrool/react-toaster";
+import { ThreeDot } from "react-loading-indicators";
 import PageHeader from "../../components/PageHeader";
+import api from "../../../shared/services/api";
 
 export default function ServicesList() {
   const [search, setSearch] = useState("");
+  const [loading, setLoading] = useState({});
   const { data: services, isLoading, isError } = useServices();
   const navigate = useNavigate();
+  const queryClient = useQueryClient();
 
   const filteredServices = services?.filter((service) =>
     service?.name?.toLowerCase().includes(search.toLowerCase())
   );
+
+  // Function to handle service deletion
+  const handleDelete = async (id) => {
+    const confirmed = window.confirm(
+      "Are you sure you want to delete this service? This action cannot be undone."
+    );
+    if (!confirmed) return;
+    setLoading((prev) => ({ ...prev, [id]: true }));
+    try {
+      const res = await api.delete(`/services/${id}`);
+
+      // Show a success message
+      toast.success(res.data.message);
+      // Invalidate and refetch services list
+      queryClient.invalidateQueries(["services"]);
+
+      // axios interceptor handles error globally
+    } finally {
+      setLoading((prev) => ({ ...prev, [id]: false }));
+    }
+  };
 
   return (
     <div className="space-y-6">
@@ -111,7 +138,11 @@ export default function ServicesList() {
                   onClick={() => handleDelete(service._id)}
                   className="flex-1 py-2 text-sm rounded-lg bg-danger-500 hover:bg-danger-800 text-white cursor-pointer"
                 >
-                  Delete
+                  {loading[service._id] ? (
+                    <ThreeDot color="white" size="small" textColor="blue" />
+                  ) : (
+                    "Delete"
+                  )}
                 </button>
               </div>
             </div>
