@@ -17,12 +17,6 @@ export default function EditService() {
       try {
         const res = await api.get(`/services/${id}`);
         setService(res.data.service);
-      } catch (err) {
-        const message =
-          err.message === "Network Error"
-            ? "Please check your network connection"
-            : err.response?.data?.message || "An error occurred";
-        toast.error(message);
       } finally {
         setLoading(false);
       }

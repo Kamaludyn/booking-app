@@ -84,21 +84,15 @@ export default function CreateServicePage({ selectedService }) {
           `/services/${selectedService._id}`,
           serviceData
         );
-        console.log("edit res:", res.data);
+        toast.success(res.data.message);
       } else {
-        console.log("create:", serviceData);
         const res = await api.post("/services", serviceData);
         toast.success(res.data.message);
       }
       queryClient.invalidateQueries(["services"]); // refresh the service list
       navigate("/dashboard/services");
-    } catch (err) {
-      console.log("error:", err);
-      if (err.message === "Network Error") {
-        toast.error("Please check your network connection");
-      } else {
-        toast.error(err.response?.data?.message || "An error occurred");
-      }
+
+      // axios interceptor handles error globally
     } finally {
       setLoading(false);
     }
@@ -236,8 +230,10 @@ export default function CreateServicePage({ selectedService }) {
           >
             {loading ? (
               <ThreeDot color="white" size="small" textColor="blue" />
-            ) : (
+            ) : selectedService ? (
               "Save Changes"
+            ) : (
+              "Add Service"
             )}
           </button>
         </div>

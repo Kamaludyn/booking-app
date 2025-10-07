@@ -1,4 +1,4 @@
-import { createContext, useContext, useState, useEffect } from "react";
+import { createContext, useContext, useState } from "react";
 import api from "../services/api";
 
 // Create the AuthContext
@@ -15,17 +15,6 @@ export const AuthProvider = ({ children }) => {
   const [user, setUser] = useState(
     JSON.parse(localStorage.getItem("user")) || null
   );
-
-  // useEffect to update the Authorization header whenever the token changes
-  useEffect(() => {
-    if (token) {
-      // If a token exists, set it as the default Authorization header for all API requests
-      api.defaults.headers.common["Authorization"] = `Bearer ${token}`;
-    } else {
-      // If no token exists, remove the Authorization header
-      delete api.defaults.headers.common["Authorization"];
-    }
-  }, [token]);
 
   // Login function
   const login = (token, userData) => {
