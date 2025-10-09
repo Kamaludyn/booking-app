@@ -344,6 +344,7 @@ const getBookings = asyncHandler(async (req, res) => {
 
   // Fetch bookings with pagination and sorting
   const bookings = await Booking.find(query)
+    .populate("serviceId", "name price")
     .sort({ "time.start": 1 }) // Latest(Upcoming) first
     .skip((page - 1) * limit)
     .limit(Number(limit));
