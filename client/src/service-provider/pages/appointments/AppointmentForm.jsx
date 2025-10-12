@@ -1,13 +1,87 @@
+import { useState } from "react";
 import { useNavigate } from "react-router-dom";
+import { useServices } from "../../hooks/UseServices";
+import { useCreateBooking } from "../../hooks/UseAppointments";
+import { ThreeDot } from "react-loading-indicators";
 import { ChevronLeft } from "lucide-react";
 
 export default function AppointmentForm() {
   const navigate = useNavigate();
+  const { data: services } = useServices();
+  const {
+    mutate,
+    isPending,
+    isError: isSubmitError,
+    error,
+  } = useCreateBooking();
+  const [formData, setFormData] = useState({
+    client: {
+      name: "",
+      email: "",
+      phone: "",
+    },
+    service: {},
+    date: "",
+    time: "",
+    notes: "",
+  });
 
-  const handleSubmit = (e) => {
+  // Handle input changes
+  const handleChange = (e) => {
+    const { name, value } = e.target;
+
+    if (name === "serviceId") {
+      // Find the selected service object
+      const selectedService = services.find((service) => service._id === value);
+      setFormData((prev) => ({
+        ...prev,
+        service: selectedService, // Store the entire service object
+      }));
+    } else if (["name", "email", "phone"].includes(name)) {
+      // Check if it's a client field
+      setFormData((prev) => ({
+        ...prev,
+        client: {
+          ...prev.client,
+          [name]: value,
+        },
+      }));
+    } else {
+      setFormData((prev) => ({
+        ...prev,
+        [name]: value,
+      }));
+    }
+  };
+
+  // Handle form submission
+  const handleSubmit = async (e) => {
     e.preventDefault();
-    alert("Appointment saved!");
-    navigate("/appointments");
+
+    // Parse the start time and calculate the end time
+    const startTime = new Date(`1970-01-01T${formData.time}:00`);
+    const endTime = new Date(
+      startTime.getTime() +
+        (formData.service.duration + formData.service.bufferTime) * 60000
+    );
+
+    // Format the end time back to "HH:mm"
+    const formattedEndTime = endTime.toISOString().slice(11, 16);
+
+    // Prepare appointment data before sending to backend
+    const apptData = {
+      ...formData,
+      serviceId: formData.service._id,
+      time: {
+        start: formData.time,
+        end: formattedEndTime,
+      },
+      timezone: Intl.DateTimeFormat().resolvedOptions().timeZone,
+      createdBy: "vendor",
+    };
+
+    // Call the useQuery mutation to create booking
+    mutate(apptData);
   };
 
   return (
@@ -28,55 +102,142 @@ export default function AppointmentForm() {
         onSubmit={handleSubmit}
         className="space-y-4 bg-surface-500 dark:bg-surface-800 p-6 rounded-xl border border-border-500 dark:border-border-800 shadow-sm"
       >
-        <div className="flex flex-col space-y-1">
-          <label className="text-sm text-text-400">Client</label>
-          <select
-            required
-            className="p-2 rounded-lg bg-white dark:bg-background-800 text-text-500 dark:text-white border border-border-500 dark:border-border-800"
-          >
-            <option value="">Select a client</option>
-            <option value="emily">Emily Parker</option>
-            <option value="james">James Smith</option>
-          </select>
-        </div>
-
-        <div className="flex flex-col space-y-1">
-          <label className="text-sm text-text-400">Service</label>
-          <select
-            required
-            className="p-2 rounded-lg bg-white dark:bg-background-800 text-text-500 dark:text-white border border-border-500 dark:border-border-800"
-          >
-            <option value="">Select a service</option>
-            <option value="haircut">Haircut</option>
-            <option value="massage">Massage</option>
-            <option value="consultation">Consultation</option>
-          </select>
-        </div>
-
-        <div className="flex flex-col space-y-1">
-          <label className="text-sm text-text-400">Date & Time</label>
+        <div>
+          <label className="block text-sm text-text-400 dark:text-text-700 mb-1">
+            Client Name
+          </label>
           <input
+            type="text"
+            name="name"
             required
-            type="datetime-local"
-            className="p-2 rounded-lg bg-white dark:bg-background-800 text-text-500 dark:text-white border border-border-500 dark:border-border-800"
+            value={formData.client.name}
+            onChange={handleChange}
+            className="w-full rounded-lg border border-border-500 dark:border-text-700/50 bg-background-800/5 dark:bg-transparent px-3 py-2 text-text-500 dark:text-white focus:ring focus:ring-primary-500 dark:focus:ring-white focus:border-transparent outline-0"
           />
         </div>
 
-        <div className="flex flex-col space-y-1">
-          <label className="text-sm text-text-400">Notes</label>
+        <div className="grid grid-cols-2 gap-4">
+          <div>
+            <label className="block text-sm text-text-400 dark:text-text-700 mb-1">
+              Email
+            </label>
+            <input
+              type="email"
+              name="email"
+              required
+              value={formData.client.email}
+              onChange={handleChange}
+              className="w-full rounded-lg border border-border-500 dark:border-text-700/50 bg-background-800/5 dark:bg-transparent px-3 py-2 text-text-500 dark:text-white focus:ring focus:ring-primary-500 dark:focus:ring-white focus:border-transparent outline-0"
+            />
+          </div>
+          <div>
+            <label className="block text-sm text-text-400 dark:text-text-700 mb-1">
+              Phone
+            </label>
+            <input
+              type="tel"
+              name="phone"
+              required
+              value={formData.client.phone}
+              onChange={handleChange}
+              className="w-full rounded-lg border border-border-500 dark:border-text-700/50 bg-background-800/5 dark:bg-transparent px-3 py-2 text-text-500 dark:text-white focus:ring focus:ring-primary-500 dark:focus:ring-white focus:border-transparent outline-0"
+            />
+          </div>
+        </div>
+
+        <div>
+          <label className="block text-sm text-text-400 dark:text-text-700 mb-1">
+            Service
+          </label>
+          <select
+            name="serviceId"
+            required
+            value={formData.serviceId}
+            onChange={handleChange}
+            className="w-full rounded-lg border border-border-500 dark:border-text-700/50 bg-background-800/5 dark:bg-transparent px-3 py-2 text-text-500 dark:text-white focus:ring focus:ring-primary-500 dark:focus:ring-white focus:border-transparent outline-0"
+          >
+            <option
+              value=""
+              className="dark:bg-surface-800 dark:text-white bg-white text-black"
+            >
+              Select a service
+            </option>
+            {services &&
+              services.map((service) => (
+                <option
+                  key={service._id}
+                  value={service._id}
+                  className="dark:bg-surface-800 dark:text-white bg-white text-black"
+                >
+                  {service.name}
+                </option>
+              ))}
+          </select>
+        </div>
+
+        <div className="grid grid-cols-2 gap-4">
+          <div>
+            <label className="block text-sm text-text-400 dark:text-text-700 mb-1">
+              Date
+            </label>
+            <input
+              type="date"
+              name="date"
+              required
+              value={formData.date}
+              onChange={handleChange}
+              className="w-full rounded-lg border border-border-500 dark:border-text-700/50 bg-background-800/5 dark:bg-transparent px-3 py-2 text-text-500 dark:text-white focus:ring focus:ring-primary-500 dark:focus:ring-white focus:border-transparent outline-0"
+            />
+          </div>
+          <div>
+            <label className="block text-sm text-text-400 dark:text-text-700 mb-1">
+              Time
+            </label>
+            <input
+              type="time"
+              name="time"
+              required
+              value={formData.time}
+              onChange={handleChange}
+              className="w-full rounded-lg border border-border-500 dark:border-text-700/50 bg-background-800/5 dark:bg-transparent px-3 py-2 text-text-500 dark:text-white focus:ring focus:ring-primary-500 dark:focus:ring-white focus:border-transparent outline-0"
+            />
+          </div>
+        </div>
+        {isSubmitError && (
+          <div>
+            <p className="text-red-500 text-sm">
+              {error?.response?.data?.message ||
+                error?.message ||
+                "An error occurred while submitting the form."}
+            </p>
+          </div>
+        )}
+        <div>
+          <label className="block text-sm text-text-400 dark:text-text-700 mb-1">
+            Notes
+          </label>
           <textarea
-            rows={3}
-            className="p-2 rounded-lg bg-white dark:bg-background-800 text-text-500 dark:text-white border border-border-500 dark:border-border-800"
+            name="notes"
+            rows="2"
+            value={formData.notes}
+            onChange={handleChange}
             placeholder="Optional notes..."
+            className="w-full rounded-lg border border-border-500 dark:border-text-700/50 bg-background-800/5 dark:bg-transparent px-3 py-2 text-text-500 dark:text-white focus:ring focus:ring-primary-500 dark:focus:ring-white focus:border-transparent outline-0"
           />
         </div>
 
-        <div className="pt-2">
+        <div className="flex justify-end pt-2">
           <button
             type="submit"
-            className="bg-primary-500 hover:bg-primary-600 text-white px-4 py-2 rounded-xl text-sm font-medium transition"
+            className={`bg-primary-500 dark:bg-primary-500/50 text-white px-5 py-2 rounded-lg hover:opacity-90 cursor-pointer ${
+              isPending && "cursor-not-allowed px-11.5"
+            }`}
           >
-            Save Appointment
+            {isPending ? (
+              <ThreeDot color="white" size="small" textColor="blue" />
+            ) : (
+              "Save Appointment"
+            )}
           </button>
         </div>
       </form>
