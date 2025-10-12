@@ -2,9 +2,10 @@ const express = require("express");
 const router = express.Router();
 const bookingController = require("./booking.controller");
 const protect = require("../../middleware/auth");
+const openProtect = require("../../middleware/optionalAuth");
 
 // @route   POST /api/v1/booking
-router.post("/", bookingController.createBooking);
+router.post("/", openProtect, bookingController.createBooking);
 
 // @route   Get /api/v1/booking/confirm-booking/:bookingId/:token
 router.post("/", bookingController.confirmBooking);
