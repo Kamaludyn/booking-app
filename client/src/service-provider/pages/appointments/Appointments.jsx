@@ -141,7 +141,14 @@ export default function Appointments() {
               >
                 <div className="flex justify-between items-start">
                   <div>
-                    <h3 className="font-medium text-text-500 dark:text-white">
+                    <h3
+                      className="font-medium text-text-500 dark:text-white hover:underline cursor-pointer"
+                      onClick={() =>
+                        navigate(`/dashboard/appointments/${appointment._id}`, {
+                          state: { appointment },
+                        })
+                      }
+                    >
                       {appointment.client?.name || "Guest Client"}
                     </h3>
                     <p className="text-sm text-text-400 dark:text-text-600">
@@ -187,7 +194,9 @@ export default function Appointments() {
                 <div className="flex gap-2 mt-auto">
                   <button
                     onClick={() =>
-                      navigate(`/dashboard/appointments/${appointment._id}`)
+                      navigate(`/dashboard/appointments/${appointment._id}`, {
+                        state: { appointment },
+                      })
                     }
                     className="bg-primary-500 hover:bg-primary-600 dark:bg-primary-500/50 dark:hover:bg-primary-600/40 flex-1 py-2 text-white text-sm rounded-lg border border-transparent dark:border-border-800 cursor-pointer"
                   >
