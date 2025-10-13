@@ -1,12 +1,30 @@
-import { useParams, useNavigate } from "react-router-dom";
-import { useAppointment } from "../../hooks/UseAppointments";
+import { useState, useEffect } from "react";
+import { useParams, useNavigate, useLocation } from "react-router-dom";
+import api from "../../../shared/services/api";
 import { Calendar, Clock, DollarSign, ChevronLeft } from "lucide-react";
 import PaymentHistorySection from "../../components/PaymentHistorySection";
 
 export default function AppointmentDetail() {
   const { id } = useParams();
   const navigate = useNavigate();
-  const appointment = useAppointment(id);
+  const location = useLocation();
+  const [appointment, setAppointment] = useState(null);
+
+  useEffect(() => {
+    // Function to fetch appointment details
+    const fetchAppointment = async () => {
+      const res = await api.get(`/booking/${id}`);
+      setAppointment(res.data.booking);
+    };
+
+    // If navigated from AppointmentsList, use state; otherwise, fetch from backend
+    if (!location.state) {
+      fetchAppointment();
+    } else {
+      const { appointment } = location.state;
+      setAppointment(appointment);
+    }
+  }, []);
 
   if (!appointment) {
     return (
@@ -16,9 +34,12 @@ export default function AppointmentDetail() {
     );
   }
 
-  const date = new Date(appointment.time);
-  const formattedDate = date.toLocaleDateString();
-  const formattedTime = date.toLocaleTimeString([], {
+  // Format start and end times
+  const startTime = new Date(appointment.time.start).toLocaleTimeString([], {
+    hour: "2-digit",
+    minute: "2-digit",
+  });
+  const endTime = new Date(appointment.time.end).toLocaleTimeString([], {
     hour: "2-digit",
     minute: "2-digit",
   });
@@ -42,14 +63,17 @@ export default function AppointmentDetail() {
           <div className="p-6 border-b border-border-500 dark:border-border-800">
             <div className="flex items-center gap-4">
               <div className="w-12 h-12 rounded-full bg-surface-600 dark:bg-surface-600/10 flex items-center justify-center text-primary-500 font-medium text-xl">
-                {appointment.client.charAt(0)}
+                {appointment.client.name.charAt(0)}
               </div>
               <div>
                 <h2 className="text-xl font-semibold text-text-500 dark:text-white">
-                  {appointment.client}
+                  {appointment.client.name}
                 </h2>
                 <p className="text-sm text-text-400 dark:text-text-600">
-                  {appointment.service}
+                  {appointment.client.name}
+                </p>
+                <p className="text-sm text-text-400 dark:text-text-600">
+                  {appointment.client.email} - {appointment.client.phone}
                 </p>
               </div>
             </div>
@@ -59,24 +83,24 @@ export default function AppointmentDetail() {
             <div className="grid grid-cols-2 gap-4">
               <StatCard
                 icon={<Calendar size={16} />}
-                value={formattedDate}
+                value={appointment.date}
                 label="Date"
               />
               <StatCard
                 icon={<Clock size={16} />}
-                value={formattedTime}
+                value={`${startTime} - ${endTime}`}
                 label="Time"
               />
               <StatCard
                 icon={<DollarSign size={16} />}
-                value={`$${appointment.servicePrice}`}
+                value={`$${appointment.serviceId.price}`}
                 label="Service Price"
               />
               <StatCard
                 icon={<DollarSign size={16} />}
                 value={
-                  <span className={getPaymentStyle(appointment.paymentStatus)}>
-                    {appointment.paymentStatus}
+                  <span className={getPaymentStyle(appointment.payment.status)}>
+                    {appointment.payment.status}
                   </span>
                 }
                 label="Payment Status"
@@ -111,7 +135,7 @@ export default function AppointmentDetail() {
           </div>
 
           <div className="p-4 border-t border-border-500 dark:border-border-800 flex justify-end gap-3">
-            <button className="px-4 py-2 rounded-lg border border-border-500 dark:border-border-800 text-text-500 dark:text-white hover:bg-surface-600 dark:bg-surface-600/10 dark:hover:bg-surface-700 cursor-pointer">
+            <button className="px-4 py-2 rounded-lg border border-border-500 dark:border-border-800 text-text-500 dark:text-white hover:bg-surface-600 dark:bg-surface-600/10 dark:hover:bg-surface-700 cursor-not-allowed">
               Reschedule
             </button>
             <button className="px-4 py-2 rounded-lg bg-primary-500 hover:bg-primary-600 text-white cursor-pointer">
@@ -128,7 +152,7 @@ export default function AppointmentDetail() {
 function StatCard({ icon, value, label }) {
   return (
     <div className="p-3 rounded-lg bg-surface-600 dark:bg-surface-600/10">
-      <div className="flex items-center gap-2 text-text-400 dark:text-text-600">
+      <div className="flex items-center gap-2 text-primary-500 dark:text-text-400">
         {icon}
         <span className="text-xs">{label}</span>
       </div>
@@ -140,14 +164,15 @@ function StatCard({ icon, value, label }) {
 function getStatusStyle(status) {
   switch (status) {
     case "upcoming":
-      return "bg-success-100 text-success-700 dark:bg-success-900/30 dark:text-success-400";
+      return "bg-success-100 text-amber-500 dark:text-amber-500/70 dark:bg-success-900/30";
     case "completed":
-      return "bg-surface-200 text-text-500 dark:bg-surface-600/10 dark:text-text-300";
-    case "cancelled":
+      return "bg-surface-200 text-success-500 dark:text-success-800 dark:bg-surface-600/10";
+    case "cancelled_by_client":
+    case "cancelled_by_vendor":
     case "missed":
-      return "bg-danger-100 text-danger-700 dark:bg-danger-900/30 dark:text-danger-400";
+      return "bg-danger-100 text-danger-500 dark:text-danger-800/70 dark:bg-danger-900/30";
     default:
-      return "bg-surface-200 text-text-500 dark:bg-surface-600/10 dark:text-text-300";
+      return "bg-surface-200 text-text-500 dark:text-text-400 dark:bg-surface-600/10";
   }
 }
 
@@ -156,8 +181,14 @@ function getPaymentStyle(payment) {
     case "paid":
       return "text-success-500 dark:text-success-400";
     case "partial":
+      return "text-amber-500 dark:text-amber-400";
+    case "pending":
+      return "text-amber-500 dark:text-amber-500/70";
+    case "failed":
+    case "refunded":
+    case "unpaid":
       return "text-danger-500 dark:text-danger-400";
     default:
-      return "text-text-500 dark:text-text-300";
+      return "";
   }
 }

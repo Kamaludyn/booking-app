@@ -3,7 +3,6 @@ import {
   DollarSign,
   X,
   Plus,
-  Calendar,
   CreditCard,
   Banknote,
   HandCoins,
@@ -25,25 +24,9 @@ export default function PaymentHistorySection({ appointment, onAddPayment }) {
   });
 
   // Calculate payment totals
-  const totalPaid =
-    appointment.payments?.reduce((sum, p) => sum + p.amount, 0) || 0;
-  const remaining = Math.max(0, appointment.servicePrice - totalPaid);
   const paymentPercentage = Math.round(
-    (totalPaid / appointment.servicePrice) * 100
+    (appointment.payment.paidAmount / appointment.serviceId.price) * 100
   );
-  const paymentStatus =
-    totalPaid >= appointment.servicePrice ? "Paid" : "Partial";
-
-  // Format date consistently
-  const formatDate = (isoString) => {
-    const date = new Date(isoString);
-    return date.toLocaleDateString("en-US", {
-      month: "short",
-      day: "numeric",
-      hour: "2-digit",
-      minute: "2-digit",
-    });
-  };
 
   // Handle form submission
   const handleSubmit = (e) => {
@@ -80,7 +63,7 @@ export default function PaymentHistorySection({ appointment, onAddPayment }) {
           <button
             onClick={() => setShowForm(true)}
             className="flex items-center gap-2 bg-primary-500 hover:bg-primary-600 text-white text-sm px-3 py-2 rounded-lg transition cursor-pointer"
-            disabled={remaining <= 0}
+            disabled={appointment.payment.balanceAmount <= 0}
           >
             <Plus size={16} />
             Add Payment
@@ -92,7 +75,8 @@ export default function PaymentHistorySection({ appointment, onAddPayment }) {
       <div className="space-y-2">
         <div className="flex justify-between text-sm">
           <span className="text-text-500 dark:text-text-400">
-            ${totalPaid.toFixed(2)} of ${appointment.servicePrice.toFixed(2)}
+            ${appointment.payment.paidAmount?.toFixed(2)} of $
+            {appointment.serviceId.price?.toFixed(2)}
           </span>
           <span className="font-medium text-text-500 dark:text-white">
             {paymentPercentage}%
@@ -104,50 +88,6 @@ export default function PaymentHistorySection({ appointment, onAddPayment }) {
             style={{ width: `${paymentPercentage}%` }}
           ></div>
         </div>
-      </div>
-
-      {/* Payment List */}
-      <div className="space-y-3">
-        {appointment.payments?.length === 0 ? (
-          <div className="p-4 rounded-lg bg-surface-600 dark:bg-surface-700 border border-border-500 dark:border-border-800 text-center">
-            <p className="text-text-400 dark:text-text-600">
-              No payments recorded yet
-            </p>
-          </div>
-        ) : (
-          appointment.payments?.map((payment) => (
-            <div
-              key={payment.id}
-              className="p-3 rounded-lg border border-border-500 dark:border-border-800 bg-surface-600 dark:bg-surface-600/10"
-            >
-              <div className="flex justify-between items-start">
-                <div className="flex items-center gap-3">
-                  <div className="p-2 rounded-full bg-surface-500 dark:bg-surface-800">
-                    {paymentMethodIcons[payment.method] ||
-                      paymentMethodIcons.offline}
-                  </div>
-                  <div>
-                    <p className="font-medium text-text-500 dark:text-white">
-                      ${payment.amount.toFixed(2)}
-                    </p>
-                    <p className="text-xs text-text-400 dark:text-text-600 mt-1">
-                      {formatDate(payment.date)}
-                    </p>
-                  </div>
-                </div>
-                <span className="text-xs px-2 py-1 rounded-full bg-surface-500 dark:bg-surface-800 text-text-500 dark:text-text-400">
-                  {payment.method.charAt(0).toUpperCase() +
-                    payment.method.slice(1)}
-                </span>
-              </div>
-              {payment.note && (
-                <p className="text-xs text-text-400 dark:text-text-600 mt-2 pl-11">
-                  {payment.note}
-                </p>
-              )}
-            </div>
-          ))
-        )}
       </div>
 
       {/* Payment Form Modal */}
@@ -169,7 +109,7 @@ export default function PaymentHistorySection({ appointment, onAddPayment }) {
             <form onSubmit={handleSubmit} className="space-y-4">
               <div>
                 <label className="block text-sm font-medium mb-1 text-text-500 dark:text-text-400">
-                  Amount (max: ${remaining.toFixed(2)})
+                  Amount (max: ${appointment.payment.balanceAmount.toFixed(2)})
                 </label>
                 <input
                   type="number"
@@ -177,7 +117,7 @@ export default function PaymentHistorySection({ appointment, onAddPayment }) {
                   onChange={(e) =>
                     setNewPayment({ ...newPayment, amount: e.target.value })
                   }
-                  max={remaining}
+                  max={appointment.payment.balanceAmount}
                   min="0.01"
                   step="0.01"
                   placeholder="0.00"
