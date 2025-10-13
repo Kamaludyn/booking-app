@@ -10,7 +10,6 @@ const toUtcDate = require("../../utils/convertTime");
 const createPayment = require("../payment/services/createPayment.service");
 const calculateRefund = require("../payment/services/calcRefund.service");
 const sendNotification = require("../notifications/notifications.services");
-const sendEmail = require("../../lib/sendEmail.js");
 
 const RESERVATION_TTL_MINUTES = process.env.RESERVATION_TTL_MINUTES || 15;
 
@@ -31,8 +30,10 @@ const createBooking = asyncHandler(async (req, res) => {
     payments,
   } = req.body;
 
-  const user = await User.findById(req.user.userId);
+  // If user is logged in, get their details
+  const user = await User.findById(req.user?.userId);
 
+  // Validate required fields
   if (!serviceId || !client || !date || !time || !timezone || !createdBy) {
     return res.status(400).json({
       success: false,
@@ -40,6 +41,7 @@ const createBooking = asyncHandler(async (req, res) => {
     });
   }
 
+  // Validate time format
   if (
     !time.start ||
     !time.end ||
@@ -127,13 +129,17 @@ const createBooking = asyncHandler(async (req, res) => {
   if (!availableSlots.includes(formattedSlot)) {
     return res.status(400).json({
       success: false,
-      message: `Selected time slot (${formattedSlot}) is no longer available.`,
-      availableSlots,
+      message: `Selected time slot (${formattedSlot}) is no longer available. ${
+        availableSlots.length > 0
+          ? "These are the available slots for the date selected:" +
+            availableSlots.join(", ")
+          : "There are no more slots available on this date"
+      }`,
     });
   }
 
   // If deposit is required, delegate to payment service (pre-booking flow)
-  if (service.requireDeposit) {
+  if (service.requireDeposit && user.role !== "vendor") {
     if (!payments) {
       return res.status(400).json({
         success: false,
@@ -187,6 +193,9 @@ const createBooking = asyncHandler(async (req, res) => {
     });
   }
 
+  // Check if user is verified
+  let notVerified = !user || !user.isVerified;
+
   // Convert local date/time to UTC using timezone
   const startTime = toUtcDate(date, time.start, timezone);
   const endTime = toUtcDate(date, time.end, timezone);
@@ -219,8 +228,6 @@ const createBooking = asyncHandler(async (req, res) => {
       repeat: "none",
     },
   });
-
-  let notVerified = !user || !user.isVerified;
 
   if (notVerified) {
     const { hashedToken, expiresAt } = await sendBookingVerificationEmail(
