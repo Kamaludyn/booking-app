@@ -63,7 +63,7 @@ export default function Appointments() {
     })
     .sort(
       (a, b) =>
-        new Date(a.time?.start).getTime() - new Date(b.time?.start).getTime()
+        new Date(b.time?.start).getTime() - new Date(a.time?.start).getTime()
     );
 
   return (
@@ -214,7 +214,7 @@ export default function Appointments() {
           <button
             disabled={page === 1}
             onClick={() => setPage((p) => Math.max(1, p - 1))}
-            className="px-4 py-2 text-sm rounded-md bg-surface-500 dark:bg-surface-700 border border-border-500 dark:border-border-800 disabled:opacity-40"
+            className="px-4 py-2 text-sm rounded-md bg-surface-500 dark:bg-surface-700 border border-border-500 dark:border-border-800 disabled:opacity-40 disabled:cursor-not-allowed cursor-pointer"
           >
             Previous
           </button>
@@ -224,7 +224,7 @@ export default function Appointments() {
           <button
             disabled={page === totalPages}
             onClick={() => setPage((p) => Math.min(totalPages, p + 1))}
-            className="px-4 py-2 text-sm rounded-md bg-surface-500 dark:bg-surface-700 border border-border-500 dark:border-border-800 disabled:opacity-40"
+            className="px-4 py-2 text-sm rounded-md bg-surface-500 dark:bg-surface-700 border border-border-500 dark:border-border-800 disabled:opacity-40 disabled:cursor-not-allowed cursor-pointer"
           >
             Next
           </button>
