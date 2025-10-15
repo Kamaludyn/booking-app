@@ -1,6 +1,9 @@
 import { useState, useEffect } from "react";
 import { useParams, useNavigate, useLocation } from "react-router-dom";
+import { useQueryClient } from "@tanstack/react-query";
 import api from "../../../shared/services/api";
+import { toast } from "@acrool/react-toaster";
+import { ThreeDot } from "react-loading-indicators";
 import { Calendar, Clock, DollarSign, ChevronLeft } from "lucide-react";
 import PaymentHistorySection from "../../components/PaymentHistorySection";
 
@@ -8,7 +11,9 @@ export default function AppointmentDetail() {
   const { id } = useParams();
   const navigate = useNavigate();
   const location = useLocation();
+  const queryClient = useQueryClient();
   const [appointment, setAppointment] = useState(null);
+  const [loading, setLoading] = useState(false);
 
   useEffect(() => {
     // Function to fetch appointment details
@@ -25,6 +30,25 @@ export default function AppointmentDetail() {
       setAppointment(appointment);
     }
   }, []);
+
+  // Function to handle appointment cancellation
+  const cancelAppointment = async (apptId) => {
+    setLoading(true);
+    const confirmed = window.confirm(
+      "Are you sure you want to delete this service? This action cannot be undone."
+    );
+    if (!confirmed) return;
+
+    const cancelledBy = "vendor";
+    try {
+      const res = await api.patch(`/booking/${apptId}/cancel`, { cancelledBy });
+      toast.success(`Appointment cancelled. ${res.data.message}`);
+      queryClient.invalidateQueries(["appointments"]);
+      navigate(-1);
+    } finally {
+      setLoading(false);
+    }
+  };
 
   if (!appointment) {
     return (
@@ -138,8 +162,17 @@ export default function AppointmentDetail() {
             <button className="px-4 py-2 rounded-lg border border-border-500 dark:border-border-800 text-text-500 dark:text-white hover:bg-surface-600 dark:bg-surface-600/10 dark:hover:bg-surface-700 cursor-not-allowed">
               Reschedule
             </button>
-            <button className="px-4 py-2 rounded-lg bg-primary-500 hover:bg-primary-600 text-white cursor-pointer">
-              Add Payment
+            <button
+              className={`px-4 py-2 rounded-lg bg-danger-500 hover:bg-danger-500/90 text-white cursor-pointer ${
+                loading && "cursor-not-allowed"
+              }`}
+              onClick={() => cancelAppointment(appointment._id)}
+            >
+              {loading ? (
+                <ThreeDot color="white" size="small" textColor="blue" />
+              ) : (
+                "cancel appointment"
+              )}
             </button>
           </div>
         </div>
