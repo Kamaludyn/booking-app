@@ -20,7 +20,6 @@ const generateBookableSlots = async (date, totalServiceDuration, vendorId) => {
     }
 
     //  Helper to convert time string (e.g., "09:00") into UTC Date object for the given day.
-
     const makeDate = (input, zone) => {
       // If input is already a Date object, just convert to the right timezone
       if (input instanceof Date) {
@@ -49,7 +48,7 @@ const generateBookableSlots = async (date, totalServiceDuration, vendorId) => {
     const vendorAvailability = await Availability.findOne({ vendorId });
     if (!vendorAvailability) throw new Error("Vendor availability not found");
 
-    const zone = vendorAvailability.timezone || "Africa/Lagos";
+    const zone = vendorAvailability.timezone;
 
     // Get today's availability
     const dayName = DateTime.fromISO(date).toFormat("EEEE").toLowerCase();
@@ -117,7 +116,7 @@ const generateBookableSlots = async (date, totalServiceDuration, vendorId) => {
     return slots;
   } catch (error) {
     if (process.env.NODE_ENV === "development") {
-      console.error("Error details:", {
+      console.error("Slot generation error:", {
         message: error.message,
         stack: error.stack,
       });
