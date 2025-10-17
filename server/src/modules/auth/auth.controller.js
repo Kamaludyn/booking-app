@@ -88,12 +88,12 @@ const login = asyncHandler(async (req, res) => {
   }
 
   // Find the user by email and explicitly include the password field
-  const user = await User.findOne({ email: email.toLowerCase() }).select(
+  const userDoc = await User.findOne({ email: email.toLowerCase() }).select(
     "+password"
   );
 
   // If user doesn't exist, return unauthorized error
-  if (!user) {
+  if (!userDoc) {
     return res.status(401).json({
       success: false,
       message: "Invalid credentials",
@@ -101,7 +101,7 @@ const login = asyncHandler(async (req, res) => {
   }
 
   // Compare provided password with hashed password in DB
-  const passwordMatch = await user.comparePassword(password);
+  const passwordMatch = await userDoc.comparePassword(password);
 
   // If password doesn't match, return error
   if (!passwordMatch) {
@@ -112,22 +112,18 @@ const login = asyncHandler(async (req, res) => {
   }
 
   // Credentials are valid — generate JWT token
-  const token = jwt.signToken({ userId: user._id, role: user.role });
+  const token = jwt.signToken({ userId: userDoc._id, role: userDoc.role });
 
-  // Prepare safe user data to send back (exclude password)
-  const userResponse = {
-    _id: user._id,
-    name: user.name,
-    email: user.email,
-    role: user.role,
-  };
+  // Convert Mongoose doc to plain object and remove password
+  const user = userDoc.toObject();
+  delete user.password;
 
   // Send token and user info as response
   res.status(200).json({
     success: true,
     message: "Login Successful",
     token,
-    user: userResponse,
+    user,
   });
 });
 
