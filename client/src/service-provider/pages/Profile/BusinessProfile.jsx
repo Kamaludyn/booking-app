@@ -1,21 +1,53 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
+import { useAuth } from "../../../shared/context/AuthContext.jsx";
 import PageHeader from "../../components/PageHeader";
+import { useVendor, useSaveVendor } from "../../hooks/UseVendor";
+import { ThreeDot } from "react-loading-indicators";
 
-const AccountSettings = () => {
+const ProfileSettings = () => {
   const [activeTab, setActiveTab] = useState("profile");
-  const [avatar, setAvatar] = useState("default-avatar.png");
-  const [businessLogo, setBusinessLogo] = useState("default-logo.png");
+  const { user } = useAuth();
+  const { data: vendorProfile } = useVendor();
+  const { mutate, isPending } = useSaveVendor();
+  const [bizProfile, setBizProfile] = useState({
+    businessName: "",
+    businessEmail: "",
+    phone: "",
+    address: "",
+    bio: "",
+    taxId: "",
+    isProfileComplete: false,
+  });
 
-  // Handle file uploads
-  const handleFileChange = (e, setImage) => {
-    const file = e.target.files[0];
-    if (file) {
-      const reader = new FileReader();
-      reader.onload = (event) => {
-        setImage(event.target.result);
-      };
-      reader.readAsDataURL(file);
+  // Populate form when vendorProfile is loaded
+  useEffect(() => {
+    if (vendorProfile) {
+      setBizProfile({
+        businessName: vendorProfile.businessName || "",
+        businessEmail: vendorProfile.businessEmail || "",
+        phone: vendorProfile.phone || "",
+        address: vendorProfile.address || "",
+        bio: vendorProfile.bio || "",
+        taxId: vendorProfile.taxId || "",
+        isProfileComplete: vendorProfile.isProfileComplete || false,
+      });
     }
+  }, [vendorProfile]);
+
+  const handleChange = (e) => {
+    const { name, value } = e.target;
+    setBizProfile((prev) => ({
+      ...prev,
+      [name]: value,
+    }));
+  };
+
+  // Handle profile form submission
+  const handleSubmit = async (e) => {
+    e.preventDefault();
+
+    // Call mutation to save vendor profile
+    mutate(bizProfile);
   };
 
   return (
@@ -25,7 +57,7 @@ const AccountSettings = () => {
       <div className="mx-auto p-6 bg-surface-500 dark:bg-surface-800 rounded-lg border border-border-500 dark:border-border-800 shadow-sm">
         <div className="flex border-b border-border-500 dark:border-border-800 mb-6">
           <button
-            className={`px-4 py-2 font-medium text-text-500 border-b-2 dark:text-text-700 ${
+            className={`px-4 py-2 font-medium text-text-500 border-b-2 dark:text-text-700 cursor-pointer ${
               activeTab === "profile"
                 ? "border-primary-500 text-primary-500"
                 : "border-transparent"
@@ -35,7 +67,7 @@ const AccountSettings = () => {
             Profile
           </button>
           <button
-            className={`px-4 py-2 font-medium text-text-500 border-b-2 dark:text-text-700 ${
+            className={`px-4 py-2 font-medium text-text-500 border-b-2 dark:text-text-700 cursor-pointer ${
               activeTab === "business"
                 ? "border-primary-500 text-primary-500"
                 : "border-transparent"
@@ -47,26 +79,7 @@ const AccountSettings = () => {
         </div>
 
         {activeTab === "profile" && (
-          <form className="space-y-4">
-            <div className="flex items-center gap-4 mb-6">
-              <div className="w-20 h-20 rounded-full bg-surface-600 border-2 border-border-500 overflow-hidden">
-                <img
-                  src={avatar}
-                  alt="Profile"
-                  className="w-full h-full object-cover"
-                />
-              </div>
-              <label className="px-4 py-2 bg-primary-500 text-white rounded-md cursor-pointer hover:bg-primary-600 transition">
-                Change Avatar
-                <input
-                  type="file"
-                  className="hidden"
-                  accept="image/*"
-                  onChange={(e) => handleFileChange(e, setAvatar)}
-                />
-              </label>
-            </div>
-
+          <form className="space-y-4 h-[65vh]">
             <div className="grid md:grid-cols-2 gap-4">
               <div>
                 <label className="block text-sm font-medium text-text-500 dark:text-text-400 mb-1">
@@ -74,7 +87,7 @@ const AccountSettings = () => {
                 </label>
                 <input
                   type="text"
-                  defaultValue="John Doe"
+                  defaultValue={`${user.surname}, ${user.othername}`}
                   className="w-full bg-white dark:bg-background-800 text-text-500 dark:text-white dark:border-border-800 border border-border-500 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-primary-500"
                 />
               </div>
@@ -84,7 +97,7 @@ const AccountSettings = () => {
                 </label>
                 <input
                   type="email"
-                  defaultValue="john@example.com"
+                  defaultValue={user.email}
                   className="w-full bg-white dark:bg-background-800 text-text-500 dark:text-white dark:border-border-800 border border-border-500 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-primary-500"
                 />
               </div>
@@ -94,38 +107,25 @@ const AccountSettings = () => {
                 </label>
                 <input
                   type="tel"
-                  defaultValue="+1234567890"
+                  defaultValue={bizProfile.phone || ""}
                   className="w-full bg-white dark:bg-background-800 text-text-500 dark:text-white dark:border-border-800 border border-border-500 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-primary-500"
                 />
               </div>
-            </div>
-
-            <div className="flex justify-end gap-3 pt-4">
-              <button
-                type="button"
-                className="px-4 py-2 bg-surface-600 text-text-500 rounded-md"
-              >
-                Cancel
-              </button>
-              <button
-                type="submit"
-                className="px-4 py-2 bg-primary-500 text-white rounded-md hover:bg-primary-600 transition"
-              >
-                Save Profile
-              </button>
             </div>
           </form>
         )}
 
         {activeTab === "business" && (
-          <form className="space-y-4">
+          <form onSubmit={handleSubmit} className="space-y-4">
             <div>
               <label className="block text-sm font-medium text-text-500 dark:text-text-400 mb-1">
                 Business Name
               </label>
               <input
                 type="text"
-                defaultValue="Beauty Salon Inc."
+                name="businessName"
+                value={bizProfile.businessName || ""}
+                onChange={handleChange}
                 className="w-full bg-white dark:bg-background-800 text-text-500 dark:text-white dark:border-border-800 border border-border-500 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-primary-500"
               />
             </div>
@@ -137,7 +137,9 @@ const AccountSettings = () => {
                 </label>
                 <input
                   type="email"
-                  defaultValue="contact@beautysalon.com"
+                  name="businessEmail"
+                  value={bizProfile.businessEmail || ""}
+                  onChange={handleChange}
                   className="w-full bg-white dark:bg-background-800 text-text-500 dark:text-white dark:border-border-800 border border-border-500 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-primary-500"
                 />
               </div>
@@ -147,7 +149,9 @@ const AccountSettings = () => {
                 </label>
                 <input
                   type="tel"
-                  defaultValue="+18005551234"
+                  name="phone"
+                  value={bizProfile.phone || ""}
+                  onChange={handleChange}
                   className="w-full bg-white dark:bg-background-800 text-text-500 dark:text-white dark:border-border-800 border border-border-500 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-primary-500"
                 />
               </div>
@@ -158,7 +162,9 @@ const AccountSettings = () => {
                 Address
               </label>
               <textarea
-                defaultValue="123 Business St, City"
+                name="address"
+                value={bizProfile.address || ""}
+                onChange={handleChange}
                 className="w-full bg-white dark:bg-background-800 text-text-500 dark:text-white dark:border-border-800 border border-border-500 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-primary-500"
               />
             </div>
@@ -170,21 +176,12 @@ const AccountSettings = () => {
                 </label>
                 <input
                   type="text"
-                  defaultValue="TAX-123456"
+                  name="taxId"
+                  value={bizProfile.taxId || ""}
+                  onChange={handleChange}
                   className="w-full bg-white dark:bg-background-800 text-text-500 dark:text-white dark:border-border-800 border border-border-500 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-primary-500"
                 />
               </div>
-
-              {/* <div>
-              <label className="block text-sm font-medium text-text-500 dark:text-text-400 mb-1">
-                Logo
-              </label>
-              <input
-                type="file"
-                className="w-full p-1.5 border border-border-500 bg-surface-500 rounded-md"
-                onChange={(e) => handleFileChange(e, setBusinessLogo)}
-              />
-            </div> */}
             </div>
 
             <div className="">
@@ -192,35 +189,26 @@ const AccountSettings = () => {
                 Description / Bio
               </label>
               <textarea
-                name="description"
-                defaultValue="Empowering people through 1 on 1 life coaching"
+                name="bio"
+                value={bizProfile.bio || ""}
+                onChange={handleChange}
                 className="w-full bg-white dark:bg-background-800 text-text-500 dark:text-white dark:border-border-800 border border-border-500 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-primary-500"
               />
             </div>
-
-            <div>
-              <label className="text-sm text-text-400 block mb-1">
-                Booking Page URL
-              </label>
-              <div className="w-full bg-white dark:bg-background-800 text-text-500 dark:text-white dark:border-border-800 border border-border-500 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-primary-500">
-                yourapp.com/book/jenny-smith
-              </div>
-            </div>
-
-            <div className="flex justify-end gap-3 pt-4">
-              <button
-                type="button"
-                className="px-4 py-2 bg-surface-600 text-text-500 rounded-md"
-              >
-                Cancel
-              </button>
-              <button
-                type="submit"
-                className="px-4 py-2 bg-primary-500 text-white rounded-md hover:bg-primary-600 transition"
-              >
-                Save Business
-              </button>
-            </div>
+            {/* <div className="flex justify-end gap-3 pt-4"> */}
+            <button
+              type="submit"
+              className={`px-4 py-2 bg-primary-500 text-white rounded-md hover:bg-primary-600 transition cursor-pointer ${
+                isPending && "cursor-not-allowed px-11.5"
+              }`}
+            >
+              {isPending ? (
+                <ThreeDot color="white" size="small" textColor="blue" />
+              ) : (
+                "Save Changes"
+              )}
+            </button>
+            {/* </div> */}
           </form>
         )}
       </div>
@@ -228,4 +216,4 @@ const AccountSettings = () => {
   );
 };
 
-export default AccountSettings;
+export default ProfileSettings;
