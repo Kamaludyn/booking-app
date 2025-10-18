@@ -10,13 +10,10 @@ router.use(protect);
 router.use(vendorOnly);
 
 // @route   POST /api/v1/vendor
-router.post("/", vendorController.createVendorProfile);
+router.patch("/", vendorController.saveVendorProfile);
 
 // @route   GET /api/v1/vendor/me
 router.get("/me", vendorController.getVendorProfile);
-
-// @route   UPDATE /api/v1/vendor/me
-router.patch("/me", vendorController.updateVendorProfile);
 
 // @route   POST /api/v1/vendor/logo
 router.post(

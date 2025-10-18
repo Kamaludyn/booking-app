@@ -3,10 +3,10 @@ const asyncHandler = require("express-async-handler");
 const cloudinary = require("../../config/cloudinary");
 const { extractPublicId } = require("../../lib/cloudinary");
 
-//  @desc    Create Vendor Profile
+//  @desc    Save Vendor Profile
 //  @route   POST /api/v1/vendor
 //  @access  Private
-const createVendorProfile = asyncHandler(async (req, res) => {
+const saveVendorProfile = asyncHandler(async (req, res) => {
   // Authenticated user's ID from request object
   const userId = req.user.userId;
 
@@ -14,27 +14,15 @@ const createVendorProfile = asyncHandler(async (req, res) => {
   const { businessName, businessEmail, phone, address, bio, category, taxId } =
     req.body;
 
-  // Check if the user already has a vendor profile
-  const vendorExist = await VendorProfile.findOne({ userId });
-  // If profile exists, return a conflict status
-  if (vendorExist) {
-    return res.status(409).json({
-      success: false,
-      message: "Profile already exists",
-    });
-  }
-
-  // Basic input validation
-  if (!businessName || !businessEmail || !phone) {
+  if (!businessName || !businessEmail || !phone || !address) {
     return res.status(400).json({
       success: false,
-      message: "Required fields are missing",
+      message: "Business name, email, phone and address are required",
     });
   }
 
-  // Create a new Vendor Profile and associate it with the user
-  const profile = await VendorProfile.create({
-    userId,
+  // Fields to be updated
+  const updatedData = {
     businessName,
     businessEmail,
     phone,
@@ -42,12 +30,33 @@ const createVendorProfile = asyncHandler(async (req, res) => {
     bio,
     category,
     taxId,
-  });
+  };
+
+  // Find and update vendor profile
+  const vendor = await VendorProfile.findOneAndUpdate(
+    { userId },
+    { $set: updatedData },
+    { new: true, runValidators: true }
+  );
+
+  // If no vendor profile is found, create one
+  if (!vendor) {
+    const profile = await VendorProfile.create({
+      userId,
+      ...updatedData,
+    });
+
+    return res.status(201).json({
+      success: true,
+      message: "Profile created successfully!",
+      vendor: profile,
+    });
+  }
 
   res.status(200).json({
     success: true,
-    message: "Profile created successfully!",
-    vendor: profile,
+    message: "Profile saved successfully!",
+    vendor,
   });
 });
 
@@ -63,46 +72,13 @@ const getVendorProfile = asyncHandler(async (req, res) => {
   if (!vendor) {
     res.status(404).json({
       success: false,
-      message: "Vendor profile not found",
+      message: "You need to create a business profile",
     });
   }
   // Return the found profile
   return res.status(200).json({
     success: true,
     vendor,
-  });
-});
-
-//  @desc    Update Vendor Profile
-//  @route   PATCH /api/v1/vendor/me
-//  @access  Private
-const updateVendorProfile = asyncHandler(async (req, res) => {
-  // Get the authenticated user's ID from the request object
-  const userId = req.user.userId;
-
-  // Get updates from the request body
-  const updates = req.body;
-
-  // Find and update the vendor profile
-  const updatedVendor = await VendorProfile.findOneAndUpdate(
-    { userId }, // Use userId to find the profile
-    { $set: updates }, // Apply updates
-    { new: true, runValidators: true } // Return updated doc and enforce schema rules
-  );
-
-  // If no vendor profile is found for the user, return a 404 error
-  if (!updatedVendor) {
-    return res.status(404).json({
-      success: false,
-      message: "Vendor profile not found",
-    });
-  }
-
-  // Return updated profile to client
-  res.status(200).json({
-    success: true,
-    message: "Profile Update Successfull",
-    vendor: updatedVendor,
   });
 });
 
@@ -184,9 +160,8 @@ const deleteVendorLogo = asyncHandler(async (req, res) => {
 });
 
 module.exports = {
-  createVendorProfile,
+  saveVendorProfile,
   getVendorProfile,
-  updateVendorProfile,
   uploadVendorLogo,
   deleteVendorLogo,
 };
