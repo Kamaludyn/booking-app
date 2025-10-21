@@ -37,6 +37,14 @@ const vendorSchema = new mongoose.Schema(
       type: String,
       trim: true,
     },
+    stripeAccountId: {
+      type: String,
+      default: null,
+    },
+    stripeOnboarded: {
+      type: Boolean,
+      default: false,
+    },
     isProfileComplete: {
       type: Boolean,
       default: false,
