@@ -159,9 +159,69 @@ const deleteVendorLogo = asyncHandler(async (req, res) => {
   });
 });
 
+//  @desc    Save Vendor Payment Settings
+//  @route   PATCH /api/v1/vendor/payment-settings
+//  @access  Vendor
+const saveVendorPaymentSettings = async (req, res) => {
+  const userId = req.user._id;
+  const { testSecretKey, testWebhookSecret } = req.body;
+
+  const vendor = await Vendor.findOne({ userId });
+  if (!vendor) return res.status(404).json({ message: "Vendor not found" });
+
+  if (testSecretKey) vendor.stripe.test.secretKey = testSecretKey;
+  if (testWebhookSecret) vendor.stripe.test.webhookSecret = testWebhookSecret;
+
+  // Only allow test→live switch if liveEnabled = true
+  if (mode && ["test", "live"].includes(mode)) {
+    if (mode === "live" && !vendor.stripe.liveEnabled) {
+      return res.status(400).json({
+        message: "Live mode not enabled yet. Please contact support.",
+      });
+    }
+    vendor.stripe.mode = mode;
+  }
+
+  await vendor.save();
+
+  res.status(200).json({
+    success: true,
+    message: "Payment settings updated successfully",
+    vendor,
+  });
+};
+
+//  @desc    Toggle Vendor Payment Mode
+//  @route   PATCH /api/v1/vendor/payment-mode
+//  @access  Vendor
+const toggleVendorPaymentMode = async (req, res) => {
+  const userId = req.user._id;
+  const { mode } = req.body;
+
+  if (!["test", "live"].includes(mode)) {
+    return res.status(400).json({ message: "Invalid mode value" });
+  }
+
+  const vendor = await Vendor.findOne({ userId });
+  if (!vendor) {
+    return res.status(404).json({ message: "Vendor not found" });
+  }
+
+  // Switch mode
+  vendor.stripe.mode = mode;
+  await vendor.save();
+
+  return res.json({
+    message: `Stripe mode switched to ${mode.toUpperCase()} successfully.`,
+    stripe: vendor.stripe,
+  });
+};
+
 module.exports = {
   saveVendorProfile,
   getVendorProfile,
   uploadVendorLogo,
   deleteVendorLogo,
+  saveVendorPaymentSettings,
+  toggleVendorPaymentMode,
 };
