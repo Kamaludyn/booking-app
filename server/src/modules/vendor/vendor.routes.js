@@ -25,4 +25,10 @@ router.post(
 // @route   DELETE /api/v1/vendor/logo
 router.delete("/logo", vendorController.deleteVendorLogo);
 
+// @route PATCH /api/v1/vendor/payment-settings
+router.patch("/payment-settings", vendorController.saveVendorPaymentSettings);
+
+// @route   PATCH /api/v1/vendor/payment-mode
+router.patch("/payment-mode", vendorController.toggleVendorPaymentMode);
+
 module.exports = router;
