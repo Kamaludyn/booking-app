@@ -7,12 +7,30 @@ const recalcBookingPayment = require("../services/recalcBookingPayment.service.j
 const toUtcDate = require("../../../utils/convertTime");
 const Service = require("../../services/services.model.js");
 const sendNotification = require("../../notifications/notifications.services.js");
+const getWebHookSecret =
+  require("../stripe/stripe.instance.js").getWebHookSecret;
 
 // @desc   Stripe payment webhook
 // @route   GET /api/v1/payments/stripe/webhook
 // @access  Stripe
 const stripeWebhook = async (req, res) => {
   const sig = req.headers["stripe-signature"];
+  const rawBody = req.body;
+
+  // First, decode event without verifying to extract metadata.vendorId
+  const possibleSession = JSON.parse(rawBody.toString());
+  const metadata = possibleSession?.data?.object?.metadata || {};
+  const vendorId = metadata.vendorId;
+
+  if (!vendorId) {
+    console.error("Missing vendorId in Stripe metadata");
+    return res.status(400).send("Missing vendorId in metadata");
+  }
+
+  const webhookSecret = await getWebHookSecret(req.user.vendorId);
+
+  // Initialize Stripe instance
+  const stripe = stripeInstance(vendorId);
   let event;
   try {
     event = stripe.webhooks.constructEvent(
@@ -95,7 +113,7 @@ const stripeWebhook = async (req, res) => {
               channels: ["email", "inapp"],
               subject: "Payment Confirmation",
               message: `${booking.client.name || "A client"} has paid ${
-                payment.currncy
+                payment.currency
               }${payment.amountPaid} for their booking on ${
                 booking.date
               } at ${booking.time.start.toLocaleTimeString()}.`,

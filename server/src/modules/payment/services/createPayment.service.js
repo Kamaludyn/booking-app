@@ -1,9 +1,9 @@
 const mongoose = require("mongoose");
-const stripe = require("stripe")(process.env.STRIPE_SECRET_KEY);
+// const stripe = require("stripe")(process.env.STRIPE_SECRET_KEY);
 const Payment = require("../payment.model.js");
 const Booking = require("../../booking/booking.model.js");
 const Service = require("../../services/services.model.js");
-const Vendor = require("../../vendor/vendor.model.js");
+const stripeInstance = require("../stripe/stripe.instance.js");
 
 const zeroDecimalCurrencies = [
   "bif",
@@ -139,13 +139,7 @@ const createPayment = async ({
       "usd"
     ).toLowerCase();
 
-    // Get vendor Profile
-    const vendor = await Vendor.findById(service.vendorId);
-    if (!vendor || !vendor.stripeAccountId) {
-      return res.status(400).json({
-        message: "Vendor not connected to Stripe",
-      });
-    }
+    const stripe = stripeInstance(vendorId);
 
     // Create Stripe Checkout session
     const session = await stripe.checkout.sessions.create({
@@ -164,12 +158,6 @@ const createPayment = async ({
           quantity: 1,
         },
       ],
-      // Payout to vendor
-      payment_intent_data: {
-        transfer_data: {
-          destination: vendor.stripeAccountId,
-        },
-      },
       success_url: `${process.env.CLIENT_URL}/booking/${bookingId}?payment=success&session_id={CHECKOUT_SESSION_ID}`,
       cancel_url: `${process.env.CLIENT_URL}/booking/${bookingId}?payment=cancel`,
       metadata: {
@@ -258,13 +246,7 @@ const createPayment = async ({
     "usd"
   ).toLowerCase();
 
-  // Get vendor Profile
-  const vendor = await Vendor.findById(service.vendorId);
-  if (!vendor || !vendor.stripeAccountId) {
-    return res.status(400).json({
-      message: "Vendor not connected to Stripe",
-    });
-  }
+  const stripe = stripeInstance(service.vendorId);
 
   // Create Stripe Checkout session, attach reservation/payment ids in metadata
   const session = await stripe.checkout.sessions.create({
@@ -283,12 +265,7 @@ const createPayment = async ({
         quantity: 1,
       },
     ],
-    // Payout to vendor
-    payment_intent_data: {
-      transfer_data: {
-        destination: vendor.stripeAccountId,
-      },
-    },
+
     success_url: `${process.env.CLIENT_URL}/booking/confirm?payment=success&session_id={CHECKOUT_SESSION_ID}`,
     cancel_url: `${process.env.CLIENT_URL}/booking/confirm?payment=cancel`,
     metadata: {
