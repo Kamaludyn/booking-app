@@ -37,14 +37,19 @@ const vendorSchema = new mongoose.Schema(
       type: String,
       trim: true,
     },
-    stripeAccountId: {
-      type: String,
-      default: null,
+    stripe: {
+      test: {
+        secretKey: { type: String },
+        webhookSecret: { type: String },
+      },
+      mode: {
+        type: String,
+        enum: ["test", "live"],
+        default: "test",
+      },
+      liveEnabled: { type: Boolean, default: false },
     },
-    stripeOnboarded: {
-      type: Boolean,
-      default: false,
-    },
+
     isProfileComplete: {
       type: Boolean,
       default: false,
