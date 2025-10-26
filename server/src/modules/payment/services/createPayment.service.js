@@ -3,7 +3,8 @@ const mongoose = require("mongoose");
 const Payment = require("../payment.model.js");
 const Booking = require("../../booking/booking.model.js");
 const Service = require("../../services/services.model.js");
-const stripeInstance = require("../stripe/stripe.instance.js");
+const stripeInstance =
+  require("../stripe/stripe.instance.js").getStripeInstance;
 
 const zeroDecimalCurrencies = [
   "bif",
@@ -139,7 +140,7 @@ const createPayment = async ({
       "usd"
     ).toLowerCase();
 
-    const stripe = stripeInstance(vendorId);
+    const stripe = await stripeInstance(vendorId);
 
     // Create Stripe Checkout session
     const session = await stripe.checkout.sessions.create({

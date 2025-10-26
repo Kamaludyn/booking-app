@@ -11,7 +11,7 @@ const {
 const sendNotification = require("../notifications/notifications.services.js");
 
 //  @desc    Process a payment
-//  @route   POST /api/v1/Payment
+//  @route   POST /api/v1/Payment/:bookingId/process-pyment
 //  @access  Private
 const processPayment = asyncHandler(async (req, res) => {
   const { bookingId } = req.params;

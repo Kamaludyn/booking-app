@@ -6,7 +6,7 @@ const protect = require("../../middleware/auth");
 // Protect all routes
 router.use(protect);
 
-// @route   POST /api/v1/payment
+// @route   POST /api/v1/payment/:bookingId/process-payment
 router.post("/:bookingId/process-payment", paymentController.processPayment);
 
 // @route   GET /api/v1/payment/me

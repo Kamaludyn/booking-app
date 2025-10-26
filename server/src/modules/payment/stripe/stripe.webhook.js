@@ -23,7 +23,6 @@ const stripeWebhook = async (req, res) => {
   const vendorId = metadata.vendorId;
 
   if (!vendorId) {
-    console.error("Missing vendorId in Stripe metadata");
     return res.status(400).send("Missing vendorId in metadata");
   }
 
