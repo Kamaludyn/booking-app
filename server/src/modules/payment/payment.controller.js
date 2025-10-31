@@ -144,32 +144,79 @@ const getPaymentsByBooking = asyncHandler(async (req, res) => {
   });
 });
 
-// @desc    Get all payment related to the authenticated user
-// @route   GET /api/v1/payments/me
+// @desc    Get all payment related to the authenticated vendor
+// @route   GET /api/v1/payments/vendor
 // @access  Vendor
-const getMyPayments = asyncHandler(async (req, res) => {
-  const { userId, role } = req.user;
+const getVendorPayments = asyncHandler(async (req, res) => {
+    const vendorId = req.user.userId;
+    const { page = 1, limit = 10, search = "", status } = req.query;
 
-  let payments = [];
+    // Base query
+    const query = { vendorId };
 
-  // Get payments based on user role
-  if (role === "vendor") {
-    payments = await Payment.find({ vendorId: userId }).sort({ createdAt: -1 });
-  } else if (role === "client") {
-    payments = await Payment.find({ clientId: userId }).sort({ createdAt: -1 });
-  } else {
-    return res.status(403).json({
-      success: false,
-      message: "Not authorized to view payments",
+    // Add status filter if provided
+    if (status) query.status = status;
+
+    // Pagination values
+    const skip = (page - 1) * limit;
+
+    // Build search filter (on service name or booking notes)
+    const searchFilter = search
+      ? {
+          $or: [
+            { "serviceId.name": { $regex: search, $options: "i" } },
+            { "bookingId.client.name": { $regex: search, $options: "i" } },
+          ],
+        }
+      : {};
+
+    // Fetch and count in parallel
+    const [payments, total] = await Promise.all([
+      Payment.find({ ...query, ...searchFilter })
+        .populate("bookingId", "client date time status notes")
+        .populate("serviceId", "name price")
+        .sort({ createdAt: -1 })
+        .skip(skip)
+        .limit(limit),
+
+      Payment.countDocuments({ ...query, ...searchFilter }),
+    ]);
+
+    return res.status(200).json({
+      success: true,
+      payments,
+      pagination: {
+        total,
+        page,
+        limit,
+        pages: Math.ceil(total / limit),
+      },
     });
-  }
+});
 
-  res.status(200).json({
-    success: true,
-    message: "Payments fetched successfully",
-    count: payments.length,
-    payments,
-  });
+// @desc    Get all payment related to the authenticated client
+// @route   GET /api/v1/payments/client
+// @access  Client
+const getClientPayments = asyncHandler(async (req, res) => {
+    const { userId } = req.user;
+
+    // Fetch all client payments
+    const payments = await Payment.find()
+      .populate({
+        path: "bookingId",
+        match: { "client.id": userId },
+        select: "client date time status notes",
+      })
+      .populate("serviceId", "name price")
+      .sort({ createdAt: -1 });
+
+    // Filter out any nulls where booking didn’t match
+    const filtered = payments.filter((p) => p.bookingId.client.id !== null);
+
+    res.status(200).json({
+      success: true,
+      payments: filtered,
+    });
 });
 
 // @desc    Update payment status (and related booking if needed)
@@ -427,7 +474,8 @@ module.exports = {
   processPayment,
   getPaymentById,
   getPaymentsByBooking,
-  getMyPayments,
+  getVendorPayments,
+  getClientPayments,
   updatePaymentStatus,
   addOfflinePayment,
   getTotalRevenue,
