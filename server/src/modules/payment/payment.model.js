@@ -61,7 +61,7 @@ const PaymentSchema = new mongoose.Schema(
 
     providerSessionId: { type: String },
     providerPaymentIntentId: { type: String },
-    ClientSnapshot: {
+    clientSnapshot: {
       name: { type: String },
       email: { type: String },
       phone: { type: String },
