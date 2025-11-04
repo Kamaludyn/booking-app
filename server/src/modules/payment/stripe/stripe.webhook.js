@@ -135,8 +135,8 @@ const stripeWebhook = async (req, res) => {
                 message: `A payment was successfully received for your service "${
                   payment.serviceId.name
                 }"
-                from client ${payment.clientSnapshot.name} (${
-                  payment.clientSnapshot.email || payment.clientSnapshot.phone
+                from client ${booking.client.name} (${
+                  booking.client.email || booking.client.phone
                 }).
                 However, the associated reservation could not be found, so no booking was created automatically.
                 Please review this payment and create a booking manually if needed or contact the client.`,

@@ -1,5 +1,4 @@
 const mongoose = require("mongoose");
-// const stripe = require("stripe")(process.env.STRIPE_SECRET_KEY);
 const Payment = require("../payment.model.js");
 const Booking = require("../../booking/booking.model.js");
 const Service = require("../../services/services.model.js");
@@ -35,9 +34,7 @@ const createPayment = async ({
   reservationId,
   bookingId,
   serviceId,
-  clientName,
   clientEmail,
-  clientPhone,
   amount,
   method,
   provider,
@@ -234,11 +231,6 @@ const createPayment = async ({
     status: "pending",
     idempotencyKey,
     meta,
-    clientSnapshot: {
-      name: clientName,
-      email: clientEmail,
-      phone: clientPhone,
-    },
   });
 
   const currency = (
