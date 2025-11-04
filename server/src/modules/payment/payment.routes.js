@@ -10,10 +10,10 @@ router.use(protect);
 router.post("/:bookingId/process-payment", paymentController.processPayment);
 
 // @route   GET /api/v1/payment/vendor
-router.get("/me", paymentController.getVendorPayments);
+router.get("/vendor", paymentController.getVendorPayments);
 
 // @route   GET /api/v1/payment/client
-router.get("/me", paymentController.getClientPayments);
+router.get("/client", paymentController.getClientPayments);
 
 // GET /api/v1/payment/refunds?vendorId&startDate&endDate
 router.get("/refunds", paymentController.getTotalRefunds);
