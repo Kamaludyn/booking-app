@@ -149,7 +149,7 @@ const getPaymentsByBooking = asyncHandler(async (req, res) => {
 // @access  Vendor
 const getVendorPayments = asyncHandler(async (req, res) => {
     const vendorId = req.user.userId;
-    const { page = 1, limit = 10, search = "", status } = req.query;
+    const { page = 1, limit = 10, status } = req.query;
 
     // Base query
     const query = { vendorId };
@@ -158,28 +158,19 @@ const getVendorPayments = asyncHandler(async (req, res) => {
     if (status) query.status = status;
 
     // Pagination values
-    const skip = (page - 1) * limit;
+     const skip = (parseInt(page) - 1) * parseInt(limit);
 
-    // Build search filter (on service name or booking notes)
-    const searchFilter = search
-      ? {
-          $or: [
-            { "serviceId.name": { $regex: search, $options: "i" } },
-            { "bookingId.client.name": { $regex: search, $options: "i" } },
-          ],
-        }
-      : {};
 
     // Fetch and count in parallel
     const [payments, total] = await Promise.all([
-      Payment.find({ ...query, ...searchFilter })
+      Payment.find({ ...query })
         .populate("bookingId", "client date time status notes")
         .populate("serviceId", "name price")
         .sort({ createdAt: -1 })
         .skip(skip)
-        .limit(limit),
+        .limit(parseInt(limit)),
 
-      Payment.countDocuments({ ...query, ...searchFilter }),
+      Payment.countDocuments({ ...query }),
     ]);
 
     return res.status(200).json({
@@ -187,8 +178,8 @@ const getVendorPayments = asyncHandler(async (req, res) => {
       payments,
       pagination: {
         total,
-        page,
-        limit,
+        page: parseInt(page),
+        limit: parseInt(limit),
         pages: Math.ceil(total / limit),
       },
     });
