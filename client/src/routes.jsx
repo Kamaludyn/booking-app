@@ -25,7 +25,7 @@ import BookingPreferencesForm from "./service-provider/pages/settings/BookingPre
 import StaffList from "./service-provider/pages/staff/StaffList";
 import StaffForm from "./service-provider/components/StaffForm";
 import StaffDetail from "./service-provider/pages/staff/StaffDetail";
-import PaymentMethods from "./service-provider/pages/Payment/PaymentMethods";
+import Payments from "./service-provider/pages/Payments/Payments";
 import Notifications from "./service-provider/pages/notifications/Notifications";
 import BookingLayout from "./booking/layouts/BookingLayout";
 import ServiceListing from "./booking/pages/services/ServiceListing";
@@ -142,7 +142,7 @@ const router = createBrowserRouter([
       },
       {
         path: "payments",
-        element: <PaymentMethods />,
+        element: <Payments />,
       },
       {
         path: "profile",
