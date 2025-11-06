@@ -4,8 +4,10 @@ import { useVendorPayments, usePaymentStats } from "../../hooks/UsePayments";
 import { ThreeDot } from "react-loading-indicators";
 import { DollarSign, RotateCcw, Clock, Settings } from "lucide-react";
 import PageHeader from "../../components/PageHeader";
+import PaymentDetailsModal from "./PaymentDetailsModal";
 
 const Payments = () => {
+  const [selectedPayment, setSelectedPayment] = useState(null);
   const [page, setPage] = useState(1);
   const [status, setStatus] = useState("");
   const navigate = useNavigate();
@@ -179,6 +181,13 @@ const Payments = () => {
           </button>
         </div>
       </div>
+      {selectedPayment && (
+        <PaymentDetailsModal
+          selectedPayment={selectedPayment}
+          setSelectedPayment={setSelectedPayment}
+          formatDate={formatDate}
+        />
+      )}
     </div>
   );
 };
